@@ -8,8 +8,7 @@
 
 - [각종 소스코드](https://github.com/femiwiki/)
 - [페미위키 디스코드 #개발 채널](https://discord.gg/umzYjJcbvH)
-- [페미위키 이슈 트래커](https://github.com/femiwiki/femiwiki/issues)
-- [페미위키 개발팀 칸반 보드](https://github.com/orgs/femiwiki/projects/1)
+- [페미위키 개발팀 칸반 보드](https://github.com/orgs/femiwiki/projects/5)
 - [페미위키 개발팀 블로그](https://femiwiki.com/w/Project:%EA%B0%9C%EB%B0%9C_%EB%B8%94%EB%A1%9C%EA%B7%B8)
 
 페미위키에 이슈나 버그, 원하시는 건의사항이 있으실 경우 언제든지 편하게 이슈를
