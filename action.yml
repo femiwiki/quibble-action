@@ -17,10 +17,9 @@ inputs:
   stage:
     description: All stages listed at https://doc.wikimedia.org/quibble/usage.html#stages. `phan` and `coverage` also supported.
     default: all
-outputs: {}
-  # random-number:
-  #   description: Random number
-  #   value: ${{ steps.random-number-generator.outputs.random-number }}
+outputs:
+  coverage:
+    value: /home/runner/cover
 runs:
   using: composite
   steps:
@@ -300,12 +299,6 @@ runs:
             --run "${{ inputs.stage }}" \
             $DEPENDENCIES
           fi
-
-    - name: Upload coverage to Codecov
-      if: ${{ inputs.stage == 'coverage' }}
-      uses: codecov/codecov-action@v3
-      with:
-        directory: /home/runner/cover
 
     - name: Tear down
       shell: bash
