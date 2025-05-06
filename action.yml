@@ -39,7 +39,9 @@ runs:
             python3 -c 'import json;import sys;print(json.loads("".join(sys.stdin.readlines()))["name"])')" >> $GITHUB_ENV
         fi
 
-        # Export the target version of MediaWiki
+    - name: Export the target version of MediaWiki
+      shell: bash
+      run: |
         # An example of GITHUB_REF: refs/heads/feature-branch-1
         BRANCH_NAME=$(echo "$GITHUB_REF" | cut -d'/' -f3 | cut -d'-' -f1)
         BASE_BRANCH_NAME=$(echo "$GITHUB_BASE_REF" | cut -d'/' -f3)
@@ -53,7 +55,9 @@ runs:
         fi
         echo MEDIAWIKI_VERSION="${MEDIAWIKI_VERSION}" >> $GITHUB_ENV
 
-        # Get the latest docker tag (Ref: https://github.com/thcipriani/dockerregistry)
+    - name: Get the latest docker tag  # Ref: https://github.com/thcipriani/dockerregistry
+      shell: bash
+      run: |
         QUIBBLE_DOCKER_LATEST_TAG="$(curl -sL "https://${DOCKER_REGISTRY}/v2/${DOCKER_ORG}/${QUIBBLE_DOCKER_IMAGE}/tags/list" |
           python3 -c 'import json;print("\n".join(json.loads(input())["tags"]))' |
           grep -v latest | sort -Vr | head -1)"
@@ -68,7 +72,9 @@ runs:
             grep -v latest | sort -Vr | head -1)" >> $GITHUB_ENV
         fi
 
-        # Resolve dependencies
+    - name: Resolve dependencies
+      shell: bash
+      run: |
         if [ -e .github/workflows/dependencies ]; then
           cd .github/workflows
           curl -sL https://raw.githubusercontent.com/wikimedia/integration-config/master/zuul/parameter_functions.py -o pf.py
@@ -216,7 +222,7 @@ runs:
           npm install
         fi
 
-    - name: Main Test
+    - name: Prepare directories
       shell: bash
       run: |
         cd /home/runner
@@ -227,8 +233,12 @@ runs:
         # https://github.com/femiwiki/.github/issues/3
         sudo chown -R nobody:nogroup src cache
         sudo chown $(id -u):$(id -g) src cache
-        # Composer install
-        if [ "${{ matrix.stage }}" == 'phan' ] || [ "${{ matrix.stage }}" == 'coverage' ]; then
+
+    - name: Composer install
+      shell: bash
+      run: |
+        if [ "${{ inputs.stage }}" == 'phan' ] || [ "${{ inputs.stage }}" == 'coverage' ]; then
+          cd /home/runner
           docker run \
             --entrypoint quibble-with-supervisord \
             -e "ZUUL_PROJECT=mediawiki/${{ env.TYPE }}s/${{ env.EXTENSION_NAME }}" \
@@ -242,7 +252,11 @@ runs:
             $DEPENDENCIES
         fi
 
-        if [ "${{ matrix.stage }}" == 'phan' ]; then
+    - name: Main Test
+      shell: bash
+      run: |
+        cd /home/runner
+        if [ "${{ inputs.stage }}" == 'phan' ]; then
           docker run \
             -e "THING_SUBNAME=${{ env.TYPE }}s/${{ env.EXTENSION_NAME }}" \
             -v "$(pwd)"/src:/mediawiki \
