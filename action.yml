@@ -85,7 +85,7 @@ runs:
           curl -sL https://raw.githubusercontent.com/wikimedia/integration-config/master/zuul/dependencies.yaml -o dependencies.yaml
           curl -sL https://raw.githubusercontent.com/wikimedia/integration-config/master/zuul/phan_dependencies.yaml -o phan_dependencies.yaml
           curl -sL https://raw.githubusercontent.com/wikimedia/integration-config/master/zuul/parameter_functions.py -o pf.py
-          curl -sL https://raw.githubusercontent.com/miraheze/ci-scripts/master/mediawiki/resolve_dependencies.py -o rd.py
+          curl -sL https://raw.githubusercontent.com/lens0021/quibble-action/refs/heads/main/resolve_dependencies.py -o rd.py
           echo "DEPENDENCIES=$(python3 rd.py dependencies)" >> $GITHUB_ENV
         fi
 
