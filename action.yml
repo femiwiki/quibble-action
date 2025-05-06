@@ -316,12 +316,15 @@ runs:
         rm "$(pwd)"/src/LocalSettings.php || true
         mkdir -p docker-images
 
+        rm "$(pwd)/docker-images/${{ inputs.quibble-docker-image }}" || true
         docker save -o "$(pwd)/docker-images/${{ inputs.quibble-docker-image }}" \
           "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.quibble-docker-image }}:${QUIBBLE_DOCKER_LATEST_TAG}"
         if [ -n "$PHAN_DOCKER_LATEST_TAG" ]; then
+          rm "$(pwd)/docker-images/${{ inputs.phan-docker-image }}" || true
           docker save -o "$(pwd)/docker-images/${{ inputs.phan-docker-image }}" \
             "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.phan-docker-image }}:${PHAN_DOCKER_LATEST_TAG}"
         elif [ -n "$COVERAGE_DOCKER_LATEST_TAG" ]; then
+          rm "$(pwd)/docker-images/${{ inputs.coverage-docker-image }}" || true
           docker save -o "$(pwd)/docker-images/${{ inputs.coverage-docker-image }}" \
             "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.coverage-docker-image }}:${COVERAGE_DOCKER_LATEST_TAG}"
         fi
