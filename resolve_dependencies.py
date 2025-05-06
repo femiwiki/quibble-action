@@ -3,8 +3,8 @@ import os
 import sys
 import yaml
 
-# pf for https://raw.githubusercontent.com/wikimedia/integration-config/master/zuul/parameter_functions.py
-from pf import dependencies, get_dependencies
+# parameter_functions for https://raw.githubusercontent.com/wikimedia/integration-config/master/zuul/parameter_functions.py
+from parameter_functions import dependencies, get_dependencies
 
 # Get dependency file path from argument
 dependencies_file = sys.argv[1]

@@ -82,11 +82,11 @@ runs:
       run: |
         if [ -e .github/workflows/dependencies ]; then
           cd .github/workflows
-          curl -sL https://raw.githubusercontent.com/wikimedia/integration-config/master/zuul/dependencies.yaml -o dependencies.yaml
-          curl -sL https://raw.githubusercontent.com/wikimedia/integration-config/master/zuul/phan_dependencies.yaml -o phan_dependencies.yaml
-          curl -sL https://raw.githubusercontent.com/wikimedia/integration-config/master/zuul/parameter_functions.py -o pf.py
-          curl -sL https://raw.githubusercontent.com/lens0021/quibble-action/refs/heads/main/resolve_dependencies.py -o rd.py
-          echo "DEPENDENCIES=$(python3 rd.py dependencies)" >> $GITHUB_ENV
+          curl -sLO https://raw.githubusercontent.com/wikimedia/integration-config/master/zuul/dependencies.yaml
+          curl -sLO https://raw.githubusercontent.com/wikimedia/integration-config/master/zuul/phan_dependencies.yaml
+          curl -sLO https://raw.githubusercontent.com/wikimedia/integration-config/master/zuul/parameter_functions.py
+          curl -sLO https://raw.githubusercontent.com/lens0021/quibble-action/refs/heads/main/resolve_dependencies.py
+          echo "DEPENDENCIES=$(python3 resolve_dependencies.py dependencies)" >> $GITHUB_ENV
         fi
 
     - name: Cache quibble docker image
