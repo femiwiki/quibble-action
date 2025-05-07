@@ -33,24 +33,6 @@ branch_rules = {
     },
 }
 
-def should_exclude(dependency, branch):
-    """Checks if a dependency should be excluded for a specific branch."""
-    # Exclusions specific to the branch
-    if branch in branch_rules and 'exclude' in branch_rules[branch]:
-        exclusions = branch_rules[branch]['exclude']
-        if dependency in exclusions:
-            print(f'Excluding {dependency} on {branch}: {exclusions[dependency]}', file=sys.stderr)
-            return True
-
-    # Exclusions defined in the 'only' rule
-    if dependency in branch_rules.get('only', {}):
-        only_rule = branch_rules['only'][dependency]
-        if branch not in only_rule['branches']:
-            print(f"Excluding {dependency} on {branch}: {only_rule['reason']}", file=sys.stderr)
-            return True
-
-    return False
-
 # Resolve dependencies
 resolved_dependencies = []
 for d in get_dependencies('ext', dependencies, recurse):
@@ -62,10 +44,6 @@ for d in get_dependencies('ext', dependencies, recurse):
         if 'branch' in dependencies['ext'][d] and dependencies['ext'][d]['branch'] != 'auto':
             branch = dependencies['ext'][d]['branch']
 
-    # Check if the dependency should be excluded
-    if should_exclude(d, branch or os.environ.get('MEDIAWIKI_VERSION')):
-        continue
-
     if branch:
         branch = '|' + branch
 
@@ -74,4 +52,4 @@ for d in get_dependencies('ext', dependencies, recurse):
     d = d + repo + branch
     resolved_dependencies.append(d)
 
-print(' '.join(resolved_dependencies))
+print('\n'.join(resolved_dependencies))
