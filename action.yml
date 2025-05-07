@@ -41,22 +41,6 @@ runs:
             python3 -c 'import json;import sys;print(json.loads("".join(sys.stdin.readlines()))["name"])')" >> $GITHUB_ENV
         fi
 
-    - name: Export the target version of MediaWiki
-      shell: bash
-      run: |
-        # An example of GITHUB_REF: refs/heads/feature-branch-1
-        BRANCH_NAME=$(echo "$GITHUB_REF" | cut -d'/' -f3 | cut -d'-' -f1)
-        BASE_BRANCH_NAME=$(echo "$GITHUB_BASE_REF" | cut -d'/' -f3)
-        if [[ "$BRANCH_NAME" =~ ^(master|REL[0-9]+_[0-9]+)$ ]]; then
-          # branch name starts with the version (ex: master-new-feature, REL1_34-bug-fix)
-          export MEDIAWIKI_VERSION="$BRANCH_NAME"
-        elif [ "$GITHUB_EVENT_NAME" == 'pull_request' ] && [[ "$BASE_BRANCH_NAME" =~ ^(master|REL[0-9]+_[0-9]+)$ ]]; then
-          export MEDIAWIKI_VERSION="$BASE_BRANCH_NAME"
-        else
-          export MEDIAWIKI_VERSION=master
-        fi
-        echo MEDIAWIKI_VERSION="${MEDIAWIKI_VERSION}" >> $GITHUB_ENV
-
     - name: Get the latest docker tag  # Ref: https://github.com/thcipriani/dockerregistry
       shell: bash
       run: |
@@ -140,11 +124,11 @@ runs:
       run: |
         cd /home/runner
         if [ ! -d src ]; then
-          git clone -b "${MEDIAWIKI_VERSION}" --depth 1 https://gerrit.wikimedia.org/r/mediawiki/core src
-          git clone --recurse-submodules -b "${MEDIAWIKI_VERSION}" --depth 1 https://gerrit.wikimedia.org/r/mediawiki/skins/Vector src/skins/Vector
+          git clone -b "${{ inputs.mediawiki-version }}" --depth 1 https://gerrit.wikimedia.org/r/mediawiki/core src
+          git clone --recurse-submodules -b "${{ inputs.mediawiki-version }}" --depth 1 https://gerrit.wikimedia.org/r/mediawiki/skins/Vector src/skins/Vector
           for dep in $DEPENDENCIES; do
             if [ "$dep" = 'mediawiki/extensions/Wikibase' ]; then
-              git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "https://gerrit.wikimedia.org/r/${dep}" src/"$(echo $dep | cut -d'/' -f2,3)"
+              git clone -b "${{ inputs.mediawiki-version }}" --depth 1 "https://gerrit.wikimedia.org/r/${dep}" src/"$(echo $dep | cut -d'/' -f2,3)"
 
               cd src/"$(echo $dep | cut -d'/' -f2,3)"
               # https://gerrit.wikimedia.org/r/q/I2037cd8bb5d568021472e048900649028b5dcc62
@@ -174,7 +158,7 @@ runs:
               git submodule update --init
               cd -
             elif [ "$dep" = 'mediawiki/extensions/WikibaseLexeme' ]; then
-              git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "https://gerrit.wikimedia.org/r/${dep}" src/"$(echo $dep | cut -d'/' -f2,3)"
+              git clone -b "${{ inputs.mediawiki-version }}" --depth 1 "https://gerrit.wikimedia.org/r/${dep}" src/"$(echo $dep | cut -d'/' -f2,3)"
 
               cd src/"$(echo $dep | cut -d'/' -f2,3)"
               # https://gerrit.wikimedia.org/r/q/I2037cd8bb5d568021472e048900649028b5dcc62
@@ -192,7 +176,7 @@ runs:
               git submodule update --init
               cd -
             else
-              git clone --recurse-submodules -b "${MEDIAWIKI_VERSION}" --depth 1 "https://gerrit.wikimedia.org/r/${dep}" src/"$(echo $dep | cut -d'/' -f2,3)"
+              git clone --recurse-submodules -b "${{ inputs.mediawiki-version }}" --depth 1 "https://gerrit.wikimedia.org/r/${dep}" src/"$(echo $dep | cut -d'/' -f2,3)"
             fi
           done
         fi
@@ -257,7 +241,7 @@ runs:
         elif [ "${{ inputs.stage }}" == 'coverage' ]; then
           if [ -d tests/phpunit ]; then
             # MW1.35+ requires PHP7.3 but quibble-coverage is not.
-            if [ "${MEDIAWIKI_VERSION}" == 'master' ]; then
+            if [ "${{ inputs.mediawiki-version }}" == 'master' ]; then
               if [ "${TYPE}" == 'skin' ]; then
                 COMMEND=mwskin-phpunit-coverage
               else
