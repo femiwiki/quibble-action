@@ -73,8 +73,13 @@ runs:
           if [ "${{ inputs.exclude-known-failures }}" == 'true' ]; then
             if [ "${{ inputs.mediawiki-version }}" == 'master' ]; then
               DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /CheckUser$)"
+              DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /IPInfo$)"
+              DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /GrowthExperiments$)"
             elif [ "${{ inputs.mediawiki-version }}" == 'REL1_43' ]; then
               DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /CheckUser$)"
+              DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /IPInfo$)"
+              DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /AbuseFilter$)"
+              DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /GrowthExperiments$)"
             fi
           fi
           DEPENDENCIES="$(echo $DEPENDENCIES | tr '\n' ' ')"
