@@ -198,7 +198,7 @@ runs:
         fi
         git -C src/ log -n 1 --format="%H"
 
-    - name: Cache dependencies (composer and npm)
+    - name: Cache dependencies (composer)
       uses: actions/cache@v3
       with:
         path: /home/runner/cache
@@ -213,18 +213,6 @@ runs:
       shell: bash
       run: |
         composer install --prefer-dist --no-progress --no-interaction # $GITHUB_WORKSPACE
-    - name: Setup Node.js environment
-      uses: actions/setup-node@v3
-      with:
-        node-version: '16'
-        cache: 'npm'
-
-    - name: Run npm because Quibble is not compatible with yarn.
-      shell: bash
-      run: |
-        if [ -f yarn.lock ]; then
-          npm install
-        fi
 
     - name: Prepare directories
       shell: bash
