@@ -101,18 +101,21 @@ runs:
         else
           docker pull "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.quibble-docker-image }}:${QUIBBLE_DOCKER_LATEST_TAG}"
         fi
+
     - name: Cache quibble coverage docker image
       if: inputs.stage == 'coverage'
       uses: actions/cache@v3
       with:
         path: /home/runner/docker-images/${{ inputs.coverage-docker-image }}
         key: ${{ inputs.coverage-docker-image }}:${{ env.COVERAGE_DOCKER_LATEST_TAG }}
+
     - name: Cache phan docker image
       if: inputs.stage == 'phan'
       uses: actions/cache@v3
       with:
         path: /home/runner/docker-images/${{ inputs.env.phan-docker-image  }}
         key: ${{ inputs.phan-docker-image }}:${{ env.PHAN_DOCKER_LATEST_TAG }}
+
     - if: inputs.stage == 'coverage'
       shell: bash
       run: |
