@@ -30,9 +30,9 @@ runs:
     # /home/runner/src/<TYPE>s/<EXTENSION_NAME>/        Clone of the extension repository
     # /home/runner/docker-images/                       Docker images which exported with docker-save command
     # $GITHUB_WORKSPACE/.github/workflows/dependencies  Dependency extensions and skins
-    - name: Set up
-      shell: bash
+    - shell: bash
       run: |
+        # Set up
         if [ -e skin.json ]; then
           echo "TYPE=skin" >> $GITHUB_ENV
           echo "EXTENSION_NAME=$(cat skin.json |
@@ -43,9 +43,10 @@ runs:
             python3 -c 'import json;import sys;print(json.loads("".join(sys.stdin.readlines()))["name"])')" >> $GITHUB_ENV
         fi
 
-    - name: Get the latest docker tag  # Ref: https://github.com/thcipriani/dockerregistry
-      shell: bash
+    - shell: bash
       run: |
+        # Get the latest docker tag
+        # Ref: https://github.com/thcipriani/dockerregistry
         QUIBBLE_DOCKER_LATEST_TAG="$(curl -sL "https://${{ inputs.docker-registry }}/v2/${{ inputs.docker-org }}/${{ inputs.quibble-docker-image }}/tags/list" |
           python3 -c 'import json;print("\n".join(json.loads(input())["tags"]))' |
           grep -v latest | sort -Vr | head -1)"
@@ -60,9 +61,9 @@ runs:
             grep -v latest | sort -Vr | head -1)" >> $GITHUB_ENV
         fi
 
-    - name: Resolve dependencies
-      shell: bash
+    - shell: bash
       run: |
+        # Resolve dependencies
         if [ -e .github/workflows/dependencies ]; then
           cd .github/workflows
           curl -sLO https://raw.githubusercontent.com/wikimedia/integration-config/master/zuul/dependencies.yaml
@@ -91,9 +92,10 @@ runs:
       with:
         path: /home/runner/docker-images/${{ inputs.quibble-docker-image }}
         key: ${{ inputs.quibble-docker-image }}:${{ env.QUIBBLE_DOCKER_LATEST_TAG }}
-    - name: Load or pull quibble docker image
-      shell: bash
+
+    - shell: bash
       run: |
+        # Load or pull quibble docker image
         if [ -f /home/runner/docker-images/"${{ inputs.quibble-docker-image }}" ]; then
           docker load -i /home/runner/docker-images/"${{ inputs.quibble-docker-image }}"
         else
@@ -111,19 +113,20 @@ runs:
       with:
         path: /home/runner/docker-images/${{ inputs.env.phan-docker-image  }}
         key: ${{ inputs.phan-docker-image }}:${{ env.PHAN_DOCKER_LATEST_TAG }}
-    - name: Load or pull quibble coverage docker image
-      if: inputs.stage == 'coverage'
+    - if: inputs.stage == 'coverage'
       shell: bash
       run: |
+        # Load or pull quibble coverage docker image
         if [ -f /home/runner/docker-images/"${{ inputs.coverage-docker-image }}" ]; then
           docker load -i /home/runner/docker-images/"${{ inputs.coverage-docker-image }}"
         else
           docker pull "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.coverage-docker-image }}:${COVERAGE_DOCKER_LATEST_TAG}"
         fi
-    - name: Load or pull phan docker image
-      if: inputs.stage == 'phan'
+
+    - if: inputs.stage == 'phan'
       shell: bash
       run: |
+        # Load or pull phan docker image
         if [ -f /home/runner/docker-images/"${{ inputs.phan-docker-image }}" ]; then
           docker load -i /home/runner/docker-images/"${{ inputs.phan-docker-image }}"
         else
@@ -135,9 +138,10 @@ runs:
       with:
         path: /home/runner/src
         key: ${{ runner.os }}-${{ inputs.mediawiki-version }}-${{ hashFiles('.github/workflows/dependencies') }}
-    - name: Download MediaWiki and extensions
-      shell: bash
+
+    - shell: bash
       run: |
+        # Download MediaWiki and extensions
         cd /home/runner
         if [ ! -d src ]; then
           git clone -b "${{ inputs.mediawiki-version }}" --depth 1 https://gerrit.wikimedia.org/r/mediawiki/core src
@@ -203,20 +207,21 @@ runs:
       with:
         path: /home/runner/cache
         key: ${{ runner.os }}-${{ inputs.mediawiki-version }}-${{ hashFiles('**/*.lock') }}
-    - name: Setup PHP Action
+
+    - uses: shivammathur/setup-php@v2
       if: ${{ inputs.stage == 'phan' }}
-      uses: shivammathur/setup-php@v2
       with:
         php-version: '7.4'
-    - name: Composer install
-      if: ${{ inputs.stage == 'phan' }}
+
+    - if: ${{ inputs.stage == 'phan' }}
       shell: bash
       run: |
+        # Composer install
         composer install --prefer-dist --no-progress --no-interaction # $GITHUB_WORKSPACE
 
-    - name: Prepare directories
-      shell: bash
+    - shell: bash
       run: |
+        # Prepare directories
         cd /home/runner
         # Move our repository
         mkdir -p cache cover src/skins src/extensions
@@ -226,9 +231,9 @@ runs:
         sudo chown -R nobody:nogroup src cache
         sudo chown $(id -u):$(id -g) src cache
 
-    - name: Composer install
-      shell: bash
+    - shell: bash
       run: |
+        # Composer install
         if [ "${{ inputs.stage }}" == 'phan' ] || [ "${{ inputs.stage }}" == 'coverage' ]; then
           cd /home/runner
           docker run \
@@ -244,9 +249,9 @@ runs:
             $DEPENDENCIES
         fi
 
-    - name: Main Test
-      shell: bash
+    - shell: bash
       run: |
+        # Main Test
         cd /home/runner
         if [ "${{ inputs.stage }}" == 'phan' ]; then
           docker run \
@@ -288,9 +293,9 @@ runs:
             $DEPENDENCIES
           fi
 
-    - name: Tear down
-      shell: bash
+    - shell: bash
       run: |
+        # Tear down
         cd /home/runner
         sudo rm -rf "src/${{ env.TYPE }}s/${{ env.EXTENSION_NAME }}"
         # See https://doc.wikimedia.org/quibble/index.html#remove-localsettings-php-between-runs
