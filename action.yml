@@ -263,49 +263,60 @@ runs:
             $DEPENDENCIES
         fi
 
-    - shell: bash
+    - if: inputs.stage == 'phan'
+      shell: bash
+      working-directory: /home/runner
       run: |
-        # Main Test
+        # Phan
         cd /home/runner
-        if [ "${{ inputs.stage }}" == 'phan' ]; then
-          docker run \
-            -e "THING_SUBNAME=${{ env.TYPE }}s/${{ env.EXTENSION_NAME }}" \
-            -v "$(pwd)"/src:/mediawiki \
-            "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.phan-docker-image }}:${PHAN_DOCKER_LATEST_TAG}" \
-            --color
-        elif [ "${{ inputs.stage }}" == 'coverage' ]; then
-          if [ -d tests/phpunit ]; then
-            # MW1.35+ requires PHP7.3 but quibble-coverage is not.
-            if [ "${{ inputs.mediawiki-version }}" == 'master' ]; then
-              if [ "${TYPE}" == 'skin' ]; then
-                COMMEND=mwskin-phpunit-coverage
-              else
-                COMMEND=mwext-phpunit-coverage
-              fi
-              docker run \
-                --entrypoint quibble-with-supervisord \
-                -e "ZUUL_PROJECT=mediawiki/${{ env.TYPE }}s/${{ env.EXTENSION_NAME }}" \
-                -v "$(pwd)"/cache:/cache \
-                -v "$(pwd)"/src:/workspace/src \
-                -v "$(pwd)"/cover:/workspace/cover \
-                "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.coverage-docker-image }}:${COVERAGE_DOCKER_LATEST_TAG}" \
-                --skip-zuul \
-                --skip-deps \
-                -c "${COMMEND}"
+        docker run \
+          -e "THING_SUBNAME=${{ env.TYPE }}s/${{ env.EXTENSION_NAME }}" \
+          -v "$(pwd)"/src:/mediawiki \
+          "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.phan-docker-image }}:${PHAN_DOCKER_LATEST_TAG}" \
+          --color
+
+    - if: inputs.stage == 'coverage'
+      shell: bash
+      working-directory: /home/runner
+      run: |
+        # Coverage
+        cd /home/runner
+        if [ -d tests/phpunit ]; then
+          # MW1.35+ requires PHP7.3 but quibble-coverage is not.
+          if [ "${{ inputs.mediawiki-version }}" == 'master' ]; then
+            if [ "${TYPE}" == 'skin' ]; then
+              COMMEND=mwskin-phpunit-coverage
+            else
+              COMMEND=mwext-phpunit-coverage
             fi
+            docker run \
+              --entrypoint quibble-with-supervisord \
+              -e "ZUUL_PROJECT=mediawiki/${{ env.TYPE }}s/${{ env.EXTENSION_NAME }}" \
+              -v "$(pwd)"/cache:/cache \
+              -v "$(pwd)"/src:/workspace/src \
+              -v "$(pwd)"/cover:/workspace/cover \
+              "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.coverage-docker-image }}:${COVERAGE_DOCKER_LATEST_TAG}" \
+              --skip-zuul \
+              --skip-deps \
+              -c "${COMMEND}"
           fi
-        else
-          docker run \
-            --entrypoint quibble-with-supervisord \
-            -e "ZUUL_PROJECT=mediawiki/${{ env.TYPE }}s/${{ env.EXTENSION_NAME }}" \
-            -v "$(pwd)"/cache:/cache \
-            -v "$(pwd)"/src:/workspace/src \
-            "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.quibble-docker-image }}:${QUIBBLE_DOCKER_LATEST_TAG}" \
-            --skip-zuul \
-            --packages-source composer \
-            --run "${{ inputs.stage }}" \
-            $DEPENDENCIES
-          fi
+        fi
+
+    - if: inputs.stage != 'phan' && inputs.stage != 'coverage'
+      shell: bash
+      working-directory: /home/runner
+      run: |
+        # Quibble
+        docker run \
+          --entrypoint quibble-with-supervisord \
+          -e "ZUUL_PROJECT=mediawiki/${{ env.TYPE }}s/${{ env.EXTENSION_NAME }}" \
+          -v "$(pwd)"/cache:/cache \
+          -v "$(pwd)"/src:/workspace/src \
+          "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.quibble-docker-image }}:${QUIBBLE_DOCKER_LATEST_TAG}" \
+          --skip-zuul \
+          --packages-source composer \
+          --run "${{ inputs.stage }}" \
+          $DEPENDENCIES
 
     - shell: bash
       run: |
