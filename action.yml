@@ -1,6 +1,7 @@
 name: quibble-action
 description: Quibble is for setting up a MediaWiki instance and running various tests against it.
 inputs:
+  # Docker
   docker-registry:
     default: docker-registry.wikimedia.org
   docker-org:
@@ -12,6 +13,7 @@ inputs:
     default: quibble-buster-php74-coverage
   phan-docker-image:
     default: mediawiki-phan-php81
+
   mediawiki-version:
     default: REL1_43
   stage:
@@ -19,6 +21,8 @@ inputs:
     default: all
   exclude-known-failures:
     default: true
+  exclude-dependencies:
+    default: ""
   cache-key:
     default: true
 outputs:
@@ -75,16 +79,21 @@ runs:
           DEPENDENCIES="$(python3 resolve_dependencies.py dependencies)"
           if [ "${{ inputs.exclude-known-failures }}" == 'true' ]; then
             if [ "${{ inputs.mediawiki-version }}" == 'master' ]; then
-              DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /CheckUser$)"
-              DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /IPInfo$)"
-              DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /GrowthExperiments$)"
+              EXCLUDES=(
+                # "GrowthExperiments"
+              )
             elif [ "${{ inputs.mediawiki-version }}" == 'REL1_43' ]; then
-              DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /CheckUser$)"
-              DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /IPInfo$)"
-              DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /AbuseFilter$)"
-              DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /GrowthExperiments$)"
+              EXCLUDES=(
+                # "GrowthExperiments"
+              )
             fi
+            for dep in "${arr[@]}"; do
+              DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /${dep}$)"
+            done
           fi
+          for dep in ${{ inputs.exclude-dependencies }}; do
+            DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /${dep}$)"
+          done
           DEPENDENCIES="$(echo $DEPENDENCIES | tr '\n' ' ')"
           echo "DEPENDENCIES=${DEPENDENCIES}" >> $GITHUB_ENV
         fi
@@ -142,7 +151,7 @@ runs:
       uses: actions/cache@v3
       with:
         path: /home/runner/src
-        key: ${{ runner.os }}-${{ inputs.mediawiki-version }}-${{ hashFiles('.github/workflows/dependencies') }}-${{ inputs.exclude-extensions }}-${{ inputs.cache-key }}
+        key: ${{ runner.os }}-${{ inputs.mediawiki-version }}-${{ hashFiles('.github/workflows/dependencies') }}-${{ inputs.exclude-dependencies }}-${{ inputs.cache-key }}
 
     - shell: bash
       run: |
