@@ -224,11 +224,11 @@ runs:
         key: ${{ runner.os }}-${{ inputs.mediawiki-version }}-${{ hashFiles('**/*.lock') }}-${{ inputs.cache-key }}
 
     - uses: shivammathur/setup-php@v2
-      if: ${{ inputs.stage == 'phan' }}
+      if: inputs.stage == 'phan'
       with:
-        php-version: '7.4'
+        php-version: '8.1'
 
-    - if: ${{ inputs.stage == 'phan' }}
+    - if: inputs.stage == 'phan'
       shell: bash
       run: |
         # Composer install
