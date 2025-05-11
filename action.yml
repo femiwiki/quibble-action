@@ -231,7 +231,9 @@ runs:
       shell: bash
       run: |
         # Composer install
-        composer install --prefer-dist --no-progress --no-interaction # $GITHUB_WORKSPACE
+        if [ -e composer.json ]; then
+          composer install --prefer-dist --no-progress --no-interaction # $GITHUB_WORKSPACE
+        fi
 
     - shell: bash
       run: |
