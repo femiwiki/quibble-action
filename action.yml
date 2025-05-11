@@ -45,6 +45,9 @@ runs:
         elif [ -e skin.json ]; then
           echo "TYPE=skin" >> $GITHUB_ENV
           echo "EXTENSION_NAME=$(jq -r .name skin.json)" >> $GITHUB_ENV
+        else
+          echo "TYPE=skin" >> $GITHUB_ENV
+          echo "EXTENSION_NAME=Vector" >> $GITHUB_ENV
         fi
 
     - shell: bash
