@@ -1,0 +1,42 @@
+name: Quibble and Phan
+
+on:
+  push:
+    paths:
+      - action.yml
+      - .github/workflows/vector.yml
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        mediawiki-version:
+          - master
+          - REL1_43
+        stage:
+          # - api-testing # https://github.com/femiwiki/quibble-action/issues/3
+          - composer-test
+          - coverage
+          - npm-test
+          - phan
+          - phpbench
+          - phpunit
+          - phpunit-parallel
+          - phpunit-standalone
+          - phpunit-unit
+          - qunit
+          - selenium
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: lens0021/quibble-action@main
+        id: quibble
+        with:
+          stage: ${{ matrix.stage }}
+          quibble-docker-image: quibble-buster-php81
+          # There is no quibble-buster-php81-coverage yet
+          coverage-docker-image: quibble-buster-php74-coverage
+          phan-docker-image: mediawiki-phan-php81
+          mediawiki-version: ${{ matrix.mediawiki-version }}
