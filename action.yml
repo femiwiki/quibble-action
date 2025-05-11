@@ -245,23 +245,22 @@ runs:
         sudo chown -R nobody:nogroup src cache
         sudo chown $(id -u):$(id -g) src cache
 
-    - shell: bash
+    - if: inputs.stage == 'phan' || inputs.stage == 'coverage'
+      shell: bash
+      working-directory: /home/runner
       run: |
         # Composer install
-        if [ "${{ inputs.stage }}" == 'phan' ] || [ "${{ inputs.stage }}" == 'coverage' ]; then
-          cd /home/runner
-          docker run \
-            --entrypoint quibble-with-supervisord \
-            -e "ZUUL_PROJECT=mediawiki/${{ env.TYPE }}s/${{ env.EXTENSION_NAME }}" \
-            -v "$(pwd)"/cache:/cache \
-            -v "$(pwd)"/src:/workspace/src \
-            "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.quibble-docker-image }}:${QUIBBLE_DOCKER_LATEST_TAG}" \
-            --skip-zuul \
-            --packages-source composer \
-            --skip-install \
-            --skip all \
-            $DEPENDENCIES
-        fi
+        docker run \
+          --entrypoint quibble-with-supervisord \
+          -e "ZUUL_PROJECT=mediawiki/${{ env.TYPE }}s/${{ env.EXTENSION_NAME }}" \
+          -v "$(pwd)"/cache:/cache \
+          -v "$(pwd)"/src:/workspace/src \
+          "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.quibble-docker-image }}:${QUIBBLE_DOCKER_LATEST_TAG}" \
+          --skip-zuul \
+          --packages-source composer \
+          --skip-install \
+          --skip all \
+          $DEPENDENCIES
 
     - if: inputs.stage == 'phan'
       shell: bash
