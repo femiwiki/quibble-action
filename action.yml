@@ -39,14 +39,12 @@ runs:
     - shell: bash
       run: |
         # Set up
-        if [ -e skin.json ]; then
-          echo "TYPE=skin" >> $GITHUB_ENV
-          echo "EXTENSION_NAME=$(cat skin.json |
-            python3 -c 'import json;import sys;print(json.loads("".join(sys.stdin.readlines()))["name"])')" >> $GITHUB_ENV
-        else
+        if [ -e extension.json ]; then
           echo "TYPE=extension" >> $GITHUB_ENV
-          echo "EXTENSION_NAME=$(cat extension.json |
-            python3 -c 'import json;import sys;print(json.loads("".join(sys.stdin.readlines()))["name"])')" >> $GITHUB_ENV
+          echo "EXTENSION_NAME=$(jq -r .name extension.json)" >> $GITHUB_ENV
+        elif [ -e skin.json ]; then
+          echo "TYPE=skin" >> $GITHUB_ENV
+          echo "EXTENSION_NAME=$(jq -r .name skin.json)" >> $GITHUB_ENV
         fi
 
     - shell: bash
