@@ -284,9 +284,9 @@ runs:
           # MW1.35+ requires PHP7.3 but quibble-coverage is not.
           if [ "${{ inputs.mediawiki-version }}" == 'master' ]; then
             if [ "${TYPE}" == 'skin' ]; then
-              COMMEND=mwskin-phpunit-coverage
+              COMMAND=mwskin-phpunit-coverage
             else
-              COMMEND=mwext-phpunit-coverage
+              COMMAND=mwext-phpunit-coverage
             fi
             docker run \
               --entrypoint quibble-with-supervisord \
@@ -297,7 +297,7 @@ runs:
               "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.coverage-docker-image }}:${COVERAGE_DOCKER_LATEST_TAG}" \
               --skip-zuul \
               --skip-deps \
-              -c "${COMMEND}"
+              -c "${COMMAND}"
           fi
         fi
 
