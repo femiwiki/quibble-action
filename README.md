@@ -115,10 +115,10 @@ its `*-docker-image` input, which takes precedence over the derivation.
 | `coverage` | `quibble-<debian>-php<version>-coverage` | `coverage-docker-image` |
 | `phan` | `mediawiki-phan-php<version>` | `phan-docker-image` |
 
-With the defaults (`debian: buster`, `php-version: '8.1'`) these resolve to
-`quibble-buster-php81`, `quibble-buster-php74-coverage`, and
-`mediawiki-phan-php81`. The coverage image defaults to an explicit value rather
-than a derived one, because only a few coverage images are published.
+For example, `debian: buster` with `php-version: '8.1'` derives
+`quibble-buster-php81` and `mediawiki-phan-php81`. The coverage image is not
+derived by default; it falls back to its explicit `coverage-docker-image`
+default, because only a few coverage images are published.
 
 Available bases and versions are whatever the
 [Wikimedia Docker registry](https://docker-registry.wikimedia.org/) publishes,
