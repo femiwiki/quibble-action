@@ -128,8 +128,8 @@ Quibble and phan on a newer PHP:
 ```yaml
       - uses: femiwiki/quibble-action@dc8d9ec9d6c86ba9805a77736c68f974d250aa8f # v1.0.0
         with:
-          debian: bullseye
-          php-version: '8.3'
+          debian: bookworm
+          php-version: '8.4'
 ```
 
 ## Inputs
@@ -144,7 +144,7 @@ Quibble and phan on a newer PHP:
 | `docker-registry` | `docker-registry.wikimedia.org` | Registry that hosts the images. |
 | `docker-org` | `releng` | Registry organization. |
 | `debian` | `buster` | Debian base for the Quibble and coverage images. |
-| `php-version` | `8.1` | PHP version. Selects the `php<version>` part of every image, and the host PHP for the `phan` stage. See [Docker images](#docker-images). |
+| `php-version` | `8.3` | PHP version. Selects the `php<version>` part of every image, and the host PHP for the `phan` stage. See [Docker images](#docker-images). |
 | `quibble-docker-image` | (derived) | Override; `quibble-<debian>-php<version>` when empty. |
 | `coverage-docker-image` | `quibble-buster-php74-coverage` | Override; `quibble-<debian>-php<version>-coverage` when empty. |
 | `phan-docker-image` | (derived) | Override; `mediawiki-phan-php<version>` when empty. |
