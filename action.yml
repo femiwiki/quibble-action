@@ -36,39 +36,53 @@ runs:
     # /home/runner/src/<TYPE>s/<EXTENSION_NAME>/        Clone of the extension repository
     # /home/runner/docker-images/                       Docker images which exported with docker-save command
     # $GITHUB_WORKSPACE/.github/workflows/dependencies  Dependency extensions and skins
-    - shell: bash
+    - id: setup
+      shell: bash
       run: |
         # Set up
         if [ -e extension.json ]; then
-          echo "TYPE=extension" >> $GITHUB_ENV
-          echo "EXTENSION_NAME=$(jq -r .name extension.json)" >> $GITHUB_ENV
+          echo "type=extension" >> "$GITHUB_OUTPUT"
+          echo "name=$(jq -r .name extension.json)" >> "$GITHUB_OUTPUT"
         elif [ -e skin.json ]; then
-          echo "TYPE=skin" >> $GITHUB_ENV
-          echo "EXTENSION_NAME=$(jq -r .name skin.json)" >> $GITHUB_ENV
+          echo "type=skin" >> "$GITHUB_OUTPUT"
+          echo "name=$(jq -r .name skin.json)" >> "$GITHUB_OUTPUT"
         else
-          echo "TYPE=skin" >> $GITHUB_ENV
-          echo "EXTENSION_NAME=Vector" >> $GITHUB_ENV
+          echo "type=skin" >> "$GITHUB_OUTPUT"
+          echo "name=Vector" >> "$GITHUB_OUTPUT"
         fi
 
-    - shell: bash
+    - id: tags
+      shell: bash
+      env:
+        DOCKER_REGISTRY: ${{ inputs.docker-registry }}
+        DOCKER_ORG: ${{ inputs.docker-org }}
+        QUIBBLE_DOCKER_IMAGE: ${{ inputs.quibble-docker-image }}
+        PHAN_DOCKER_IMAGE: ${{ inputs.phan-docker-image }}
+        COVERAGE_DOCKER_IMAGE: ${{ inputs.coverage-docker-image }}
+        STAGE: ${{ inputs.stage }}
       run: |
         # Get the latest docker tag
         # Ref: https://github.com/thcipriani/dockerregistry
-        QUIBBLE_DOCKER_LATEST_TAG="$(curl -sL "https://${{ inputs.docker-registry }}/v2/${{ inputs.docker-org }}/${{ inputs.quibble-docker-image }}/tags/list" |
+        QUIBBLE_DOCKER_LATEST_TAG="$(curl -sL "https://${DOCKER_REGISTRY}/v2/${DOCKER_ORG}/${QUIBBLE_DOCKER_IMAGE}/tags/list" |
           python3 -c 'import json;print("\n".join(json.loads(input())["tags"]))' |
           grep -v latest | sort -Vr | head -1)"
-        echo "QUIBBLE_DOCKER_LATEST_TAG=${QUIBBLE_DOCKER_LATEST_TAG}" >> $GITHUB_ENV
-        if [ "${{ inputs.stage }}" == 'phan' ]; then
-          echo "PHAN_DOCKER_LATEST_TAG=$(curl -sL "https://${{ inputs.docker-registry }}/v2/${{ inputs.docker-org }}/${{ inputs.phan-docker-image }}/tags/list" |
+        echo "quibble=${QUIBBLE_DOCKER_LATEST_TAG}" >> "$GITHUB_OUTPUT"
+        if [ "${STAGE}" == 'phan' ]; then
+          echo "phan=$(curl -sL "https://${DOCKER_REGISTRY}/v2/${DOCKER_ORG}/${PHAN_DOCKER_IMAGE}/tags/list" |
             python3 -c 'import json;print("\n".join(json.loads(input())["tags"]))' |
-            grep -v latest | sort -Vr | head -1)" >> $GITHUB_ENV
-        elif [ "${{ inputs.stage }}" == 'coverage' ]; then
-          echo "COVERAGE_DOCKER_LATEST_TAG=$(curl -sL "https://${{ inputs.docker-registry }}/v2/${{ inputs.docker-org }}/${{ inputs.coverage-docker-image }}/tags/list" |
+            grep -v latest | sort -Vr | head -1)" >> "$GITHUB_OUTPUT"
+        elif [ "${STAGE}" == 'coverage' ]; then
+          echo "coverage=$(curl -sL "https://${DOCKER_REGISTRY}/v2/${DOCKER_ORG}/${COVERAGE_DOCKER_IMAGE}/tags/list" |
             python3 -c 'import json;print("\n".join(json.loads(input())["tags"]))' |
-            grep -v latest | sort -Vr | head -1)" >> $GITHUB_ENV
+            grep -v latest | sort -Vr | head -1)" >> "$GITHUB_OUTPUT"
         fi
 
-    - shell: bash
+    - id: deps
+      shell: bash
+      env:
+        EXCLUDE_KNOWN_FAILURES: ${{ inputs.exclude-known-failures }}
+        MEDIAWIKI_VERSION: ${{ inputs.mediawiki-version }}
+        EXCLUDE_DEPENDENCIES: ${{ inputs.exclude-dependencies }}
       run: |
         # Resolve dependencies
         if [ -e .github/workflows/dependencies ]; then
@@ -78,12 +92,12 @@ runs:
           curl -sLO https://raw.githubusercontent.com/wikimedia/integration-config/master/zuul/parameter_functions.py
           curl -sLO https://raw.githubusercontent.com/lens0021/quibble-action/refs/heads/main/resolve_dependencies.py
           DEPENDENCIES="$(python3 resolve_dependencies.py dependencies)"
-          if [ "${{ inputs.exclude-known-failures }}" == 'true' ]; then
-            if [ "${{ inputs.mediawiki-version }}" == 'master' ]; then
+          if [ "${EXCLUDE_KNOWN_FAILURES}" == 'true' ]; then
+            if [ "${MEDIAWIKI_VERSION}" == 'master' ]; then
               EXCLUDES=(
                 # "GrowthExperiments"
               )
-            elif [ "${{ inputs.mediawiki-version }}" == 'REL1_43' ]; then
+            elif [ "${MEDIAWIKI_VERSION}" == 'REL1_43' ]; then
               EXCLUDES=(
                 # "GrowthExperiments"
               )
@@ -92,78 +106,96 @@ runs:
               DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /${dep}$)"
             done
           fi
-          for dep in ${{ inputs.exclude-dependencies }}; do
+          for dep in ${EXCLUDE_DEPENDENCIES}; do
             DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /${dep}$)"
           done
           DEPENDENCIES="$(echo $DEPENDENCIES | tr '\n' ' ')"
-          echo "DEPENDENCIES=${DEPENDENCIES}" >> $GITHUB_ENV
+          echo "dependencies=${DEPENDENCIES}" >> "$GITHUB_OUTPUT"
         fi
 
     - name: Cache quibble docker image
-      uses: actions/cache@v3
+      uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c # v3
       with:
         path: /home/runner/docker-images/${{ inputs.quibble-docker-image }}
-        key: ${{ inputs.quibble-docker-image }}:${{ env.QUIBBLE_DOCKER_LATEST_TAG }}-${{ inputs.cache-key }}
+        key: ${{ inputs.quibble-docker-image }}:${{ steps.tags.outputs.quibble }}-${{ inputs.cache-key }}
 
     - shell: bash
+      env:
+        QUIBBLE_DOCKER_IMAGE: ${{ inputs.quibble-docker-image }}
+        DOCKER_REGISTRY: ${{ inputs.docker-registry }}
+        DOCKER_ORG: ${{ inputs.docker-org }}
+        QUIBBLE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.quibble }}
       run: |
         # Load or pull quibble docker image
-        if [ -f /home/runner/docker-images/"${{ inputs.quibble-docker-image }}" ]; then
-          docker load -i /home/runner/docker-images/"${{ inputs.quibble-docker-image }}"
+        if [ -f /home/runner/docker-images/"${QUIBBLE_DOCKER_IMAGE}" ]; then
+          docker load -i /home/runner/docker-images/"${QUIBBLE_DOCKER_IMAGE}"
         else
-          docker pull "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.quibble-docker-image }}:${QUIBBLE_DOCKER_LATEST_TAG}"
+          docker pull "${DOCKER_REGISTRY}/${DOCKER_ORG}/${QUIBBLE_DOCKER_IMAGE}:${QUIBBLE_DOCKER_LATEST_TAG}"
         fi
 
     - name: Cache quibble coverage docker image
       if: inputs.stage == 'coverage'
-      uses: actions/cache@v3
+      uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c # v3
       with:
         path: /home/runner/docker-images/${{ inputs.coverage-docker-image }}
-        key: ${{ inputs.coverage-docker-image }}:${{ env.COVERAGE_DOCKER_LATEST_TAG }}-${{ inputs.cache-key }}
+        key: ${{ inputs.coverage-docker-image }}:${{ steps.tags.outputs.coverage }}-${{ inputs.cache-key }}
 
     - name: Cache phan docker image
       if: inputs.stage == 'phan'
-      uses: actions/cache@v3
+      uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c # v3
       with:
         path: /home/runner/docker-images/${{ inputs.env.phan-docker-image  }}
-        key: ${{ inputs.phan-docker-image }}:${{ env.PHAN_DOCKER_LATEST_TAG }}-${{ inputs.cache-key }}
+        key: ${{ inputs.phan-docker-image }}:${{ steps.tags.outputs.phan }}-${{ inputs.cache-key }}
 
     - if: inputs.stage == 'coverage'
       shell: bash
+      env:
+        COVERAGE_DOCKER_IMAGE: ${{ inputs.coverage-docker-image }}
+        DOCKER_REGISTRY: ${{ inputs.docker-registry }}
+        DOCKER_ORG: ${{ inputs.docker-org }}
+        COVERAGE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.coverage }}
       run: |
         # Load or pull quibble coverage docker image
-        if [ -f /home/runner/docker-images/"${{ inputs.coverage-docker-image }}" ]; then
-          docker load -i /home/runner/docker-images/"${{ inputs.coverage-docker-image }}"
+        if [ -f /home/runner/docker-images/"${COVERAGE_DOCKER_IMAGE}" ]; then
+          docker load -i /home/runner/docker-images/"${COVERAGE_DOCKER_IMAGE}"
         else
-          docker pull "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.coverage-docker-image }}:${COVERAGE_DOCKER_LATEST_TAG}"
+          docker pull "${DOCKER_REGISTRY}/${DOCKER_ORG}/${COVERAGE_DOCKER_IMAGE}:${COVERAGE_DOCKER_LATEST_TAG}"
         fi
 
     - if: inputs.stage == 'phan'
       shell: bash
+      env:
+        PHAN_DOCKER_IMAGE: ${{ inputs.phan-docker-image }}
+        DOCKER_REGISTRY: ${{ inputs.docker-registry }}
+        DOCKER_ORG: ${{ inputs.docker-org }}
+        PHAN_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.phan }}
       run: |
         # Load or pull phan docker image
-        if [ -f /home/runner/docker-images/"${{ inputs.phan-docker-image }}" ]; then
-          docker load -i /home/runner/docker-images/"${{ inputs.phan-docker-image }}"
+        if [ -f /home/runner/docker-images/"${PHAN_DOCKER_IMAGE}" ]; then
+          docker load -i /home/runner/docker-images/"${PHAN_DOCKER_IMAGE}"
         else
-          docker pull "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.phan-docker-image }}:${PHAN_DOCKER_LATEST_TAG}"
+          docker pull "${DOCKER_REGISTRY}/${DOCKER_ORG}/${PHAN_DOCKER_IMAGE}:${PHAN_DOCKER_LATEST_TAG}"
         fi
 
     - name: Cache MediaWiki installation
-      uses: actions/cache@v3
+      uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c # v3
       with:
         path: /home/runner/src
         key: ${{ runner.os }}-${{ inputs.mediawiki-version }}-${{ hashFiles('.github/workflows/dependencies') }}-${{ inputs.exclude-dependencies }}-${{ inputs.cache-key }}
 
     - shell: bash
+      env:
+        MEDIAWIKI_VERSION: ${{ inputs.mediawiki-version }}
+        DEPENDENCIES: ${{ steps.deps.outputs.dependencies }}
       run: |
         # Download MediaWiki and extensions
         cd /home/runner
         if [ ! -d src ]; then
-          git clone -b "${{ inputs.mediawiki-version }}" --depth 1 https://gerrit.wikimedia.org/r/mediawiki/core src
-          git clone --recurse-submodules -b "${{ inputs.mediawiki-version }}" --depth 1 https://gerrit.wikimedia.org/r/mediawiki/skins/Vector src/skins/Vector
+          git clone -b "${MEDIAWIKI_VERSION}" --depth 1 https://gerrit.wikimedia.org/r/mediawiki/core src
+          git clone --recurse-submodules -b "${MEDIAWIKI_VERSION}" --depth 1 https://gerrit.wikimedia.org/r/mediawiki/skins/Vector src/skins/Vector
           for dep in $DEPENDENCIES; do
             if [ "$dep" = 'mediawiki/extensions/Wikibase' ]; then
-              git clone -b "${{ inputs.mediawiki-version }}" --depth 1 "https://gerrit.wikimedia.org/r/${dep}" src/"$(echo $dep | cut -d'/' -f2,3)"
+              git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "https://gerrit.wikimedia.org/r/${dep}" src/"$(echo $dep | cut -d'/' -f2,3)"
 
               cd src/"$(echo $dep | cut -d'/' -f2,3)"
               # https://gerrit.wikimedia.org/r/q/I2037cd8bb5d568021472e048900649028b5dcc62
@@ -193,7 +225,7 @@ runs:
               git submodule update --init
               cd -
             elif [ "$dep" = 'mediawiki/extensions/WikibaseLexeme' ]; then
-              git clone -b "${{ inputs.mediawiki-version }}" --depth 1 "https://gerrit.wikimedia.org/r/${dep}" src/"$(echo $dep | cut -d'/' -f2,3)"
+              git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "https://gerrit.wikimedia.org/r/${dep}" src/"$(echo $dep | cut -d'/' -f2,3)"
 
               cd src/"$(echo $dep | cut -d'/' -f2,3)"
               # https://gerrit.wikimedia.org/r/q/I2037cd8bb5d568021472e048900649028b5dcc62
@@ -211,19 +243,19 @@ runs:
               git submodule update --init
               cd -
             else
-              git clone --recurse-submodules -b "${{ inputs.mediawiki-version }}" --depth 1 "https://gerrit.wikimedia.org/r/${dep}" src/"$(echo $dep | cut -d'/' -f2,3)"
+              git clone --recurse-submodules -b "${MEDIAWIKI_VERSION}" --depth 1 "https://gerrit.wikimedia.org/r/${dep}" src/"$(echo $dep | cut -d'/' -f2,3)"
             fi
           done
         fi
         git -C src/ log -n 1 --format="%H"
 
     - name: Cache dependencies (composer)
-      uses: actions/cache@v3
+      uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c # v3
       with:
         path: /home/runner/cache
         key: ${{ runner.os }}-${{ inputs.mediawiki-version }}-${{ hashFiles('**/*.lock') }}-${{ inputs.cache-key }}
 
-    - uses: shivammathur/setup-php@v2
+    - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
       if: inputs.stage == 'phan'
       with:
         php-version: '8.1'
@@ -237,12 +269,15 @@ runs:
         fi
 
     - shell: bash
+      env:
+        TYPE: ${{ steps.setup.outputs.type }}
+        EXTENSION_NAME: ${{ steps.setup.outputs.name }}
       run: |
         # Prepare directories
         cd /home/runner
         # Move our repository
         mkdir -p cache cover src/skins src/extensions
-        sudo cp -r "${GITHUB_WORKSPACE}" "src/${{ env.TYPE }}s/${{ env.EXTENSION_NAME }}"
+        sudo cp -r "${GITHUB_WORKSPACE}" "src/${TYPE}s/${EXTENSION_NAME}"
         chmod 777 src cache cover
         # https://github.com/femiwiki/.github/issues/3
         sudo chown -R nobody:nogroup src cache
@@ -251,14 +286,22 @@ runs:
     - if: inputs.stage == 'phan' || inputs.stage == 'coverage'
       shell: bash
       working-directory: /home/runner
+      env:
+        TYPE: ${{ steps.setup.outputs.type }}
+        EXTENSION_NAME: ${{ steps.setup.outputs.name }}
+        DOCKER_REGISTRY: ${{ inputs.docker-registry }}
+        DOCKER_ORG: ${{ inputs.docker-org }}
+        QUIBBLE_DOCKER_IMAGE: ${{ inputs.quibble-docker-image }}
+        QUIBBLE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.quibble }}
+        DEPENDENCIES: ${{ steps.deps.outputs.dependencies }}
       run: |
         # Composer install
         docker run \
           --entrypoint quibble-with-supervisord \
-          -e "ZUUL_PROJECT=mediawiki/${{ env.TYPE }}s/${{ env.EXTENSION_NAME }}" \
+          -e "ZUUL_PROJECT=mediawiki/${TYPE}s/${EXTENSION_NAME}" \
           -v "$(pwd)"/cache:/cache \
           -v "$(pwd)"/src:/workspace/src \
-          "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.quibble-docker-image }}:${QUIBBLE_DOCKER_LATEST_TAG}" \
+          "${DOCKER_REGISTRY}/${DOCKER_ORG}/${QUIBBLE_DOCKER_IMAGE}:${QUIBBLE_DOCKER_LATEST_TAG}" \
           --skip-zuul \
           --packages-source composer \
           --skip-install \
@@ -268,24 +311,39 @@ runs:
     - if: inputs.stage == 'phan'
       shell: bash
       working-directory: /home/runner
+      env:
+        TYPE: ${{ steps.setup.outputs.type }}
+        EXTENSION_NAME: ${{ steps.setup.outputs.name }}
+        DOCKER_REGISTRY: ${{ inputs.docker-registry }}
+        DOCKER_ORG: ${{ inputs.docker-org }}
+        PHAN_DOCKER_IMAGE: ${{ inputs.phan-docker-image }}
+        PHAN_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.phan }}
       run: |
         # Phan
         cd /home/runner
         docker run \
-          -e "THING_SUBNAME=${{ env.TYPE }}s/${{ env.EXTENSION_NAME }}" \
+          -e "THING_SUBNAME=${TYPE}s/${EXTENSION_NAME}" \
           -v "$(pwd)"/src:/mediawiki \
-          "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.phan-docker-image }}:${PHAN_DOCKER_LATEST_TAG}" \
+          "${DOCKER_REGISTRY}/${DOCKER_ORG}/${PHAN_DOCKER_IMAGE}:${PHAN_DOCKER_LATEST_TAG}" \
           --color
 
     - if: inputs.stage == 'coverage'
       shell: bash
       working-directory: /home/runner
+      env:
+        MEDIAWIKI_VERSION: ${{ inputs.mediawiki-version }}
+        TYPE: ${{ steps.setup.outputs.type }}
+        EXTENSION_NAME: ${{ steps.setup.outputs.name }}
+        DOCKER_REGISTRY: ${{ inputs.docker-registry }}
+        DOCKER_ORG: ${{ inputs.docker-org }}
+        COVERAGE_DOCKER_IMAGE: ${{ inputs.coverage-docker-image }}
+        COVERAGE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.coverage }}
       run: |
         # Coverage
         cd /home/runner
         if [ -d tests/phpunit ]; then
           # MW1.35+ requires PHP7.3 but quibble-coverage is not.
-          if [ "${{ inputs.mediawiki-version }}" == 'master' ]; then
+          if [ "${MEDIAWIKI_VERSION}" == 'master' ]; then
             if [ "${TYPE}" == 'skin' ]; then
               COMMAND=mwskin-phpunit-coverage
             else
@@ -293,11 +351,11 @@ runs:
             fi
             docker run \
               --entrypoint quibble-with-supervisord \
-              -e "ZUUL_PROJECT=mediawiki/${{ env.TYPE }}s/${{ env.EXTENSION_NAME }}" \
+              -e "ZUUL_PROJECT=mediawiki/${TYPE}s/${EXTENSION_NAME}" \
               -v "$(pwd)"/cache:/cache \
               -v "$(pwd)"/src:/workspace/src \
               -v "$(pwd)"/cover:/workspace/cover \
-              "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.coverage-docker-image }}:${COVERAGE_DOCKER_LATEST_TAG}" \
+              "${DOCKER_REGISTRY}/${DOCKER_ORG}/${COVERAGE_DOCKER_IMAGE}:${COVERAGE_DOCKER_LATEST_TAG}" \
               --skip-zuul \
               --skip-deps \
               -c "${COMMAND}"
@@ -307,37 +365,57 @@ runs:
     - if: inputs.stage != 'phan' && inputs.stage != 'coverage'
       shell: bash
       working-directory: /home/runner
+      env:
+        TYPE: ${{ steps.setup.outputs.type }}
+        EXTENSION_NAME: ${{ steps.setup.outputs.name }}
+        DOCKER_REGISTRY: ${{ inputs.docker-registry }}
+        DOCKER_ORG: ${{ inputs.docker-org }}
+        QUIBBLE_DOCKER_IMAGE: ${{ inputs.quibble-docker-image }}
+        QUIBBLE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.quibble }}
+        STAGE: ${{ inputs.stage }}
+        DEPENDENCIES: ${{ steps.deps.outputs.dependencies }}
       run: |
         # Quibble
         docker run \
           --entrypoint quibble-with-supervisord \
-          -e "ZUUL_PROJECT=mediawiki/${{ env.TYPE }}s/${{ env.EXTENSION_NAME }}" \
+          -e "ZUUL_PROJECT=mediawiki/${TYPE}s/${EXTENSION_NAME}" \
           -v "$(pwd)"/cache:/cache \
           -v "$(pwd)"/src:/workspace/src \
-          "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.quibble-docker-image }}:${QUIBBLE_DOCKER_LATEST_TAG}" \
+          "${DOCKER_REGISTRY}/${DOCKER_ORG}/${QUIBBLE_DOCKER_IMAGE}:${QUIBBLE_DOCKER_LATEST_TAG}" \
           --skip-zuul \
           --packages-source composer \
-          --run "${{ inputs.stage }}" \
+          --run "${STAGE}" \
           $DEPENDENCIES
 
     - shell: bash
+      env:
+        TYPE: ${{ steps.setup.outputs.type }}
+        EXTENSION_NAME: ${{ steps.setup.outputs.name }}
+        DOCKER_REGISTRY: ${{ inputs.docker-registry }}
+        DOCKER_ORG: ${{ inputs.docker-org }}
+        QUIBBLE_DOCKER_IMAGE: ${{ inputs.quibble-docker-image }}
+        PHAN_DOCKER_IMAGE: ${{ inputs.phan-docker-image }}
+        COVERAGE_DOCKER_IMAGE: ${{ inputs.coverage-docker-image }}
+        QUIBBLE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.quibble }}
+        PHAN_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.phan }}
+        COVERAGE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.coverage }}
       run: |
         # Tear down
         cd /home/runner
-        sudo rm -rf "src/${{ env.TYPE }}s/${{ env.EXTENSION_NAME }}"
+        sudo rm -rf "src/${TYPE}s/${EXTENSION_NAME}"
         # See https://doc.wikimedia.org/quibble/index.html#remove-localsettings-php-between-runs
         rm "$(pwd)"/src/LocalSettings.php || true
         mkdir -p docker-images
 
-        rm "$(pwd)/docker-images/${{ inputs.quibble-docker-image }}" || true
-        docker save -o "$(pwd)/docker-images/${{ inputs.quibble-docker-image }}" \
-          "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.quibble-docker-image }}:${QUIBBLE_DOCKER_LATEST_TAG}"
+        rm "$(pwd)/docker-images/${QUIBBLE_DOCKER_IMAGE}" || true
+        docker save -o "$(pwd)/docker-images/${QUIBBLE_DOCKER_IMAGE}" \
+          "${DOCKER_REGISTRY}/${DOCKER_ORG}/${QUIBBLE_DOCKER_IMAGE}:${QUIBBLE_DOCKER_LATEST_TAG}"
         if [ -n "$PHAN_DOCKER_LATEST_TAG" ]; then
-          rm "$(pwd)/docker-images/${{ inputs.phan-docker-image }}" || true
-          docker save -o "$(pwd)/docker-images/${{ inputs.phan-docker-image }}" \
-            "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.phan-docker-image }}:${PHAN_DOCKER_LATEST_TAG}"
+          rm "$(pwd)/docker-images/${PHAN_DOCKER_IMAGE}" || true
+          docker save -o "$(pwd)/docker-images/${PHAN_DOCKER_IMAGE}" \
+            "${DOCKER_REGISTRY}/${DOCKER_ORG}/${PHAN_DOCKER_IMAGE}:${PHAN_DOCKER_LATEST_TAG}"
         elif [ -n "$COVERAGE_DOCKER_LATEST_TAG" ]; then
-          rm "$(pwd)/docker-images/${{ inputs.coverage-docker-image }}" || true
-          docker save -o "$(pwd)/docker-images/${{ inputs.coverage-docker-image }}" \
-            "${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.coverage-docker-image }}:${COVERAGE_DOCKER_LATEST_TAG}"
+          rm "$(pwd)/docker-images/${COVERAGE_DOCKER_IMAGE}" || true
+          docker save -o "$(pwd)/docker-images/${COVERAGE_DOCKER_IMAGE}" \
+            "${DOCKER_REGISTRY}/${DOCKER_ORG}/${COVERAGE_DOCKER_IMAGE}:${COVERAGE_DOCKER_LATEST_TAG}"
         fi
