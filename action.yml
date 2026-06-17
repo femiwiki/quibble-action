@@ -270,7 +270,6 @@ runs:
       working-directory: /home/runner
       run: |
         # Phan
-        cd /home/runner
         docker run \
           -e "THING_SUBNAME=${{ env.TYPE }}s/${{ env.EXTENSION_NAME }}" \
           -v "$(pwd)"/src:/mediawiki \
@@ -282,7 +281,6 @@ runs:
       working-directory: /home/runner
       run: |
         # Coverage
-        cd /home/runner
         if [ -d tests/phpunit ]; then
           # MW1.35+ requires PHP7.3 but quibble-coverage is not.
           if [ "${{ inputs.mediawiki-version }}" == 'master' ]; then
