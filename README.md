@@ -101,6 +101,14 @@ jobs:
           path: ${{ steps.quibble.outputs.coverage }}
 ```
 
+### Logs
+
+Quibble's logs and artifacts are uploaded as an artifact after every run,
+including failures, so you can download them from the workflow run page. The
+artifact is named by `log-artifact-name` (default `quibble-logs`); set a unique
+name per job when running a matrix, since artifact names must be unique within a
+workflow run.
+
 ## Docker images
 
 Every stage runs in an official Wikimedia image, pulled as
@@ -141,6 +149,7 @@ older PHP, such as when testing an older MediaWiki branch:
 | `exclude-known-failures` | `true` | Skip dependencies that are known to fail. |
 | `exclude-dependencies` | (none) | Space-separated list of dependency names to skip. |
 | `cache-key` | `true` | Mixed into every cache key; change it to bust the caches. |
+| `log-artifact-name` | `quibble-logs` | Name for the uploaded Quibble logs artifact. |
 | `docker-registry` | `docker-registry.wikimedia.org` | Registry that hosts the images. |
 | `docker-org` | `releng` | Registry organization. |
 | `debian` | `bookworm` | Debian base for the Quibble and coverage images. |
