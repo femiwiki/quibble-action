@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mediawiki-version: [REL1_43, master]
+        mediawiki-version: [REL1_45, master]
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - uses: femiwiki/quibble-action@dc8d9ec9d6c86ba9805a77736c68f974d250aa8f # v1.0.0
@@ -105,7 +105,7 @@ jobs:
 
 | Name | Default | Description |
 | --- | --- | --- |
-| `mediawiki-version` | `REL1_43` | MediaWiki branch to test against, for example `master` or `REL1_43`. |
+| `mediawiki-version` | `REL1_45` | MediaWiki branch to test against, for example `master` or `REL1_43`. |
 | `stage` | `all` | Stage to run. Any Quibble stage, or `phan` / `coverage`. |
 | `exclude-known-failures` | `true` | Skip dependencies that are known to fail. |
 | `exclude-dependencies` | (none) | Space-separated list of dependency names to skip. |

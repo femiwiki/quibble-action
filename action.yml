@@ -15,7 +15,7 @@ inputs:
     default: mediawiki-phan-php81
 
   mediawiki-version:
-    default: REL1_43
+    default: REL1_45
   stage:
     description: All stages listed at https://doc.wikimedia.org/quibble/usage.html#stages. `phan` and `coverage` also supported.
     default: all
