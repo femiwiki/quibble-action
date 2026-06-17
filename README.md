@@ -103,11 +103,11 @@ jobs:
 
 ## Docker images
 
-Every stage runs in an official Wikimedia image pulled from
-`docker-registry`/`docker-org`. By default each image is derived from
-`php-version` (and `debian` for Quibble and coverage), so you usually only set
-those two knobs. Any image can also be pinned explicitly with its
-`*-docker-image` input, which takes precedence over the derivation.
+Every stage runs in an official Wikimedia image, pulled as
+`<docker-registry>/<docker-org>/<image>:<tag>`. By default the `<image>` is
+derived from `php-version` (and `debian` for Quibble and coverage), so you
+usually only set those two knobs. Any image can also be pinned explicitly with
+its `*-docker-image` input, which takes precedence over the derivation.
 
 | Stage | Derived image | Override input |
 | --- | --- | --- |
