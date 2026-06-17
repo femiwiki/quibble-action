@@ -144,7 +144,7 @@ runs:
       if: inputs.stage == 'phan'
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
-        path: /home/runner/docker-images/${{ inputs.env.phan-docker-image  }}
+        path: /home/runner/docker-images/${{ inputs.phan-docker-image }}
         key: ${{ inputs.phan-docker-image }}:${{ steps.tags.outputs.phan }}-${{ inputs.cache-key }}
 
     - if: inputs.stage == 'coverage'
