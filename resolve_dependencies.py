@@ -1,5 +1,4 @@
 # A script to resolve dependencies of MediaWiki extension for Quibble test
-import os
 import sys
 import yaml
 
