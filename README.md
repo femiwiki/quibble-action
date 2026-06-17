@@ -23,8 +23,7 @@ for. It can also run [Phan] static analysis and PHPUnit code coverage.
    to the Vector skin.
 2. **Resolves dependencies.** If a `.github/workflows/dependencies` file exists,
    the action resolves the full dependency tree from the Wikimedia
-   `integration-config` and clones each extension or skin into place. Wikibase
-   and WikibaseLexeme submodule URLs are rewritten to their GitHub mirrors.
+   `integration-config` and clones each extension or skin into place.
 3. **Restores caches.** The Docker images, the MediaWiki checkout, and the
    Composer cache are all cached between runs.
 4. **Runs the stage.** Quibble runs the requested stage inside the Docker image,
