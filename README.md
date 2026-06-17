@@ -115,6 +115,7 @@ jobs:
 | `quibble-docker-image` | `quibble-buster-php81` | Image used for most stages. |
 | `coverage-docker-image` | `quibble-buster-php74-coverage` | Image used for the `coverage` stage. |
 | `phan-docker-image` | `mediawiki-phan-php81` | Image used for the `phan` stage. |
+| `php-version` | `8.1` | PHP version to set up for the `phan` stage. |
 
 ## Outputs
 
