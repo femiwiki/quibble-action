@@ -20,6 +20,9 @@ inputs:
     description: >-
       PHP version for the `phan` stage. Sets up this PHP on the host for
       `composer install` and selects the `mediawiki-phan-php<version>` image.
+      Supported versions are those published as a `mediawiki-phan-php<version>`
+      image in the Wikimedia Docker registry
+      (https://docker-registry.wikimedia.org/).
     default: '8.1'
 
   mediawiki-version:

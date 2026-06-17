@@ -115,7 +115,7 @@ jobs:
 | `quibble-docker-image` | `quibble-buster-php81` | Image used for most stages. |
 | `coverage-docker-image` | `quibble-buster-php74-coverage` | Image used for the `coverage` stage. |
 | `phan-docker-image` | (derived) | Override for the phan image. Derived from `php-version` as `mediawiki-phan-php<version>` when empty. |
-| `php-version` | `8.1` | PHP version for the `phan` stage. Sets up host PHP for `composer install` and selects the phan image. |
+| `php-version` | `8.1` | PHP version for the `phan` stage. Sets up host PHP for `composer install` and selects the phan image. Supported versions are those published as a `mediawiki-phan-php<version>` image in the [Wikimedia Docker registry](https://docker-registry.wikimedia.org/). |
 
 ## Outputs
 
