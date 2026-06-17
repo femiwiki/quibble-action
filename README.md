@@ -101,6 +101,37 @@ jobs:
           path: ${{ steps.quibble.outputs.coverage }}
 ```
 
+## Docker images
+
+Every stage runs in an official Wikimedia image pulled from
+`docker-registry`/`docker-org`. By default each image is derived from
+`php-version` (and `debian` for Quibble and coverage), so you usually only set
+those two knobs. Any image can also be pinned explicitly with its
+`*-docker-image` input, which takes precedence over the derivation.
+
+| Stage | Derived image | Override input |
+| --- | --- | --- |
+| Quibble (`all` and individual stages) | `quibble-<debian>-php<version>` | `quibble-docker-image` |
+| `coverage` | `quibble-<debian>-php<version>-coverage` | `coverage-docker-image` |
+| `phan` | `mediawiki-phan-php<version>` | `phan-docker-image` |
+
+With the defaults (`debian: buster`, `php-version: '8.1'`) these resolve to
+`quibble-buster-php81`, `quibble-buster-php74-coverage`, and
+`mediawiki-phan-php81`. The coverage image defaults to an explicit value rather
+than a derived one, because only a few coverage images are published.
+
+Available bases and versions are whatever the
+[Wikimedia Docker registry](https://docker-registry.wikimedia.org/) publishes,
+so not every `debian` / `php-version` combination exists. For example, to run
+Quibble and phan on a newer PHP:
+
+```yaml
+      - uses: femiwiki/quibble-action@dc8d9ec9d6c86ba9805a77736c68f974d250aa8f # v1.0.0
+        with:
+          debian: bullseye
+          php-version: '8.3'
+```
+
 ## Inputs
 
 | Name | Default | Description |
@@ -110,12 +141,13 @@ jobs:
 | `exclude-known-failures` | `true` | Skip dependencies that are known to fail. |
 | `exclude-dependencies` | (none) | Space-separated list of dependency names to skip. |
 | `cache-key` | `true` | Mixed into every cache key; change it to bust the caches. |
-| `docker-registry` | `docker-registry.wikimedia.org` | Registry that hosts the Quibble images. |
+| `docker-registry` | `docker-registry.wikimedia.org` | Registry that hosts the images. |
 | `docker-org` | `releng` | Registry organization. |
-| `quibble-docker-image` | `quibble-buster-php81` | Image used for most stages. |
-| `coverage-docker-image` | `quibble-buster-php74-coverage` | Image used for the `coverage` stage. |
-| `phan-docker-image` | (derived) | Override for the phan image. Derived from `php-version` as `mediawiki-phan-php<version>` when empty. |
-| `php-version` | `8.1` | PHP version for the `phan` stage. Sets up host PHP for `composer install` and selects the phan image. Supported versions are those published as a `mediawiki-phan-php<version>` image in the [Wikimedia Docker registry](https://docker-registry.wikimedia.org/). |
+| `debian` | `buster` | Debian base for the Quibble and coverage images. |
+| `php-version` | `8.1` | PHP version. Selects the `php<version>` part of every image, and the host PHP for the `phan` stage. See [Docker images](#docker-images). |
+| `quibble-docker-image` | (derived) | Override; `quibble-<debian>-php<version>` when empty. |
+| `coverage-docker-image` | `quibble-buster-php74-coverage` | Override; `quibble-<debian>-php<version>-coverage` when empty. |
+| `phan-docker-image` | (derived) | Override; `mediawiki-phan-php<version>` when empty. |
 
 ## Outputs
 

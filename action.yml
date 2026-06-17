@@ -6,10 +6,19 @@ inputs:
     default: docker-registry.wikimedia.org
   docker-org:
     default: releng
+  debian:
+    description: Debian base for the Quibble and coverage images.
+    default: buster
   quibble-docker-image:
-    default: quibble-buster-php81
+    description: >-
+      Override for the Quibble Docker image. When empty, it is derived as
+      `quibble-<debian>-php<version>` from `debian` and `php-version`.
+    default: ""
   coverage-docker-image:
-    # There is no quibble-buster-php81-coverage yet
+    description: >-
+      Override for the coverage Docker image. When empty, it is derived as
+      `quibble-<debian>-php<version>-coverage`. Defaults to an explicit image
+      because few coverage images are published.
     default: quibble-buster-php74-coverage
   phan-docker-image:
     description: >-
@@ -18,11 +27,10 @@ inputs:
     default: ""
   php-version:
     description: >-
-      PHP version for the `phan` stage. Sets up this PHP on the host for
-      `composer install` and selects the `mediawiki-phan-php<version>` image.
-      Supported versions are those published as a `mediawiki-phan-php<version>`
-      image in the Wikimedia Docker registry
-      (https://docker-registry.wikimedia.org/).
+      PHP version. Selects the `php<version>` part of the Quibble, coverage,
+      and phan images, and sets up this PHP on the host for the `phan` stage's
+      `composer install`. Available versions depend on the images published in
+      the Wikimedia Docker registry (https://docker-registry.wikimedia.org/).
     default: '8.1'
 
   mediawiki-version:
@@ -67,21 +75,27 @@ runs:
       env:
         DOCKER_REGISTRY: ${{ inputs.docker-registry }}
         DOCKER_ORG: ${{ inputs.docker-org }}
-        QUIBBLE_DOCKER_IMAGE: ${{ inputs.quibble-docker-image }}
-        PHAN_IMAGE_OVERRIDE: ${{ inputs.phan-docker-image }}
+        DEBIAN: ${{ inputs.debian }}
         PHP_VERSION: ${{ inputs.php-version }}
-        COVERAGE_DOCKER_IMAGE: ${{ inputs.coverage-docker-image }}
+        QUIBBLE_IMAGE_OVERRIDE: ${{ inputs.quibble-docker-image }}
+        COVERAGE_IMAGE_OVERRIDE: ${{ inputs.coverage-docker-image }}
+        PHAN_IMAGE_OVERRIDE: ${{ inputs.phan-docker-image }}
         STAGE: ${{ inputs.stage }}
       run: |
+        # Resolve the Docker images from php-version and debian, unless overridden
+        php="php${PHP_VERSION//./}"
+        QUIBBLE_DOCKER_IMAGE="${QUIBBLE_IMAGE_OVERRIDE:-quibble-${DEBIAN}-${php}}"
+        COVERAGE_DOCKER_IMAGE="${COVERAGE_IMAGE_OVERRIDE:-quibble-${DEBIAN}-${php}-coverage}"
+        PHAN_DOCKER_IMAGE="${PHAN_IMAGE_OVERRIDE:-mediawiki-phan-${php}}"
+        echo "quibble_image=${QUIBBLE_DOCKER_IMAGE}" >> "$GITHUB_OUTPUT"
+        echo "coverage_image=${COVERAGE_DOCKER_IMAGE}" >> "$GITHUB_OUTPUT"
+        echo "phan_image=${PHAN_DOCKER_IMAGE}" >> "$GITHUB_OUTPUT"
         # Get the latest docker tag
         # Ref: https://github.com/thcipriani/dockerregistry
         QUIBBLE_DOCKER_LATEST_TAG="$(curl -sL "https://${DOCKER_REGISTRY}/v2/${DOCKER_ORG}/${QUIBBLE_DOCKER_IMAGE}/tags/list" |
           python3 -c 'import json;print("\n".join(json.loads(input())["tags"]))' |
           grep -v latest | sort -Vr | head -1)"
         echo "quibble=${QUIBBLE_DOCKER_LATEST_TAG}" >> "$GITHUB_OUTPUT"
-        # Derive the phan image from php-version unless overridden
-        PHAN_DOCKER_IMAGE="${PHAN_IMAGE_OVERRIDE:-mediawiki-phan-php${PHP_VERSION//./}}"
-        echo "phan_image=${PHAN_DOCKER_IMAGE}" >> "$GITHUB_OUTPUT"
         if [ "${STAGE}" == 'phan' ]; then
           echo "phan=$(curl -sL "https://${DOCKER_REGISTRY}/v2/${DOCKER_ORG}/${PHAN_DOCKER_IMAGE}/tags/list" |
             python3 -c 'import json;print("\n".join(json.loads(input())["tags"]))' |
@@ -131,12 +145,12 @@ runs:
     - name: Cache quibble docker image
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
-        path: /home/runner/docker-images/${{ inputs.quibble-docker-image }}
-        key: ${{ inputs.quibble-docker-image }}:${{ steps.tags.outputs.quibble }}-${{ inputs.cache-key }}
+        path: /home/runner/docker-images/${{ steps.tags.outputs.quibble_image }}
+        key: ${{ steps.tags.outputs.quibble_image }}:${{ steps.tags.outputs.quibble }}-${{ inputs.cache-key }}
 
     - shell: bash
       env:
-        QUIBBLE_DOCKER_IMAGE: ${{ inputs.quibble-docker-image }}
+        QUIBBLE_DOCKER_IMAGE: ${{ steps.tags.outputs.quibble_image }}
         DOCKER_REGISTRY: ${{ inputs.docker-registry }}
         DOCKER_ORG: ${{ inputs.docker-org }}
         QUIBBLE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.quibble }}
@@ -152,8 +166,8 @@ runs:
       if: inputs.stage == 'coverage'
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
-        path: /home/runner/docker-images/${{ inputs.coverage-docker-image }}
-        key: ${{ inputs.coverage-docker-image }}:${{ steps.tags.outputs.coverage }}-${{ inputs.cache-key }}
+        path: /home/runner/docker-images/${{ steps.tags.outputs.coverage_image }}
+        key: ${{ steps.tags.outputs.coverage_image }}:${{ steps.tags.outputs.coverage }}-${{ inputs.cache-key }}
 
     - name: Cache phan docker image
       if: inputs.stage == 'phan'
@@ -165,7 +179,7 @@ runs:
     - if: inputs.stage == 'coverage'
       shell: bash
       env:
-        COVERAGE_DOCKER_IMAGE: ${{ inputs.coverage-docker-image }}
+        COVERAGE_DOCKER_IMAGE: ${{ steps.tags.outputs.coverage_image }}
         DOCKER_REGISTRY: ${{ inputs.docker-registry }}
         DOCKER_ORG: ${{ inputs.docker-org }}
         COVERAGE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.coverage }}
@@ -306,7 +320,7 @@ runs:
         EXTENSION_NAME: ${{ steps.setup.outputs.name }}
         DOCKER_REGISTRY: ${{ inputs.docker-registry }}
         DOCKER_ORG: ${{ inputs.docker-org }}
-        QUIBBLE_DOCKER_IMAGE: ${{ inputs.quibble-docker-image }}
+        QUIBBLE_DOCKER_IMAGE: ${{ steps.tags.outputs.quibble_image }}
         QUIBBLE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.quibble }}
         DEPENDENCIES: ${{ steps.deps.outputs.dependencies }}
       run: |
@@ -350,7 +364,7 @@ runs:
         EXTENSION_NAME: ${{ steps.setup.outputs.name }}
         DOCKER_REGISTRY: ${{ inputs.docker-registry }}
         DOCKER_ORG: ${{ inputs.docker-org }}
-        COVERAGE_DOCKER_IMAGE: ${{ inputs.coverage-docker-image }}
+        COVERAGE_DOCKER_IMAGE: ${{ steps.tags.outputs.coverage_image }}
         COVERAGE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.coverage }}
       run: |
         # Coverage
@@ -383,7 +397,7 @@ runs:
         EXTENSION_NAME: ${{ steps.setup.outputs.name }}
         DOCKER_REGISTRY: ${{ inputs.docker-registry }}
         DOCKER_ORG: ${{ inputs.docker-org }}
-        QUIBBLE_DOCKER_IMAGE: ${{ inputs.quibble-docker-image }}
+        QUIBBLE_DOCKER_IMAGE: ${{ steps.tags.outputs.quibble_image }}
         QUIBBLE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.quibble }}
         STAGE: ${{ inputs.stage }}
         DEPENDENCIES: ${{ steps.deps.outputs.dependencies }}
@@ -406,9 +420,9 @@ runs:
         EXTENSION_NAME: ${{ steps.setup.outputs.name }}
         DOCKER_REGISTRY: ${{ inputs.docker-registry }}
         DOCKER_ORG: ${{ inputs.docker-org }}
-        QUIBBLE_DOCKER_IMAGE: ${{ inputs.quibble-docker-image }}
+        QUIBBLE_DOCKER_IMAGE: ${{ steps.tags.outputs.quibble_image }}
         PHAN_DOCKER_IMAGE: ${{ steps.tags.outputs.phan_image }}
-        COVERAGE_DOCKER_IMAGE: ${{ inputs.coverage-docker-image }}
+        COVERAGE_DOCKER_IMAGE: ${{ steps.tags.outputs.coverage_image }}
         QUIBBLE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.quibble }}
         PHAN_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.phan }}
         COVERAGE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.coverage }}
