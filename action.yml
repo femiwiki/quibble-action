@@ -47,8 +47,10 @@ inputs:
   upload-logs:
     description: >-
       Upload Quibble's logs as an artifact after the run (including on failure).
-      Off by default, because artifact storage can incur costs on private
-      repositories.
+      Off by default. Before enabling, consider that the artifact uses storage
+      (billable on private repositories), is kept for the repository's retention
+      period, and is downloadable by anyone who can view the run, so it should
+      not contain sensitive data.
     default: false
   log-artifact-name:
     description: >-
