@@ -101,21 +101,6 @@ jobs:
           path: ${{ steps.quibble.outputs.coverage }}
 ```
 
-### Logs
-
-Set `upload-logs: true` to upload Quibble's logs and artifacts after the run
-(including on failure), so you can download them from the workflow run page. It
-is off by default. Before enabling, consider that the artifact:
-
-- uses storage, which is billable on private repositories;
-- is kept for the repository's retention period (90 days by default);
-- can be downloaded by anyone who can view the workflow run, so make sure the
-  logs do not expose sensitive data.
-
-The artifact is named by `log-artifact-name` (default `quibble-logs`); set a
-unique name per job when running a matrix, since artifact names must be unique
-within a workflow run.
-
 ## Docker images
 
 Every stage runs in an official Wikimedia image, pulled as
@@ -156,7 +141,7 @@ older PHP, such as when testing an older MediaWiki branch:
 | `exclude-known-failures` | `true` | Skip dependencies that are known to fail. |
 | `exclude-dependencies` | (none) | Space-separated list of dependency names to skip. |
 | `cache-key` | `true` | Mixed into every cache key; change it to bust the caches. |
-| `upload-logs` | `false` | Upload Quibble's logs as an artifact (opt-in). See [Logs](#logs) for what to consider before enabling. |
+| `upload-logs` | `false` | Upload Quibble's logs as an artifact (opt-in, captured on failure too). Mind storage cost, retention, and that the artifact is downloadable by anyone who can view the run. |
 | `log-artifact-name` | `quibble-logs` | Name for the uploaded Quibble logs artifact. |
 | `docker-registry` | `docker-registry.wikimedia.org` | Registry that hosts the images. |
 | `docker-org` | `releng` | Registry organization. |
