@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-      - uses: femiwiki/quibble-action@v1
+      - uses: femiwiki/quibble-action@dc8d9ec9d6c86ba9805a77736c68f974d250aa8f # v1.0.0
 ```
 
 ### Choosing a stage
@@ -50,7 +50,7 @@ By default the `all` stage runs. Set `stage` to run a single Quibble stage, or
 one of the two extra modes this action adds:
 
 ```yaml
-      - uses: femiwiki/quibble-action@v1
+      - uses: femiwiki/quibble-action@dc8d9ec9d6c86ba9805a77736c68f974d250aa8f # v1.0.0
         with:
           stage: phpunit
 ```
@@ -82,7 +82,7 @@ jobs:
         mediawiki-version: [REL1_43, master]
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-      - uses: femiwiki/quibble-action@v1
+      - uses: femiwiki/quibble-action@dc8d9ec9d6c86ba9805a77736c68f974d250aa8f # v1.0.0
         with:
           mediawiki-version: ${{ matrix.mediawiki-version }}
 ```
@@ -91,7 +91,7 @@ jobs:
 
 ```yaml
       - id: quibble
-        uses: femiwiki/quibble-action@v1
+        uses: femiwiki/quibble-action@dc8d9ec9d6c86ba9805a77736c68f974d250aa8f # v1.0.0
         with:
           stage: coverage
           mediawiki-version: master
