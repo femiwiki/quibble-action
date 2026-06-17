@@ -100,7 +100,7 @@ runs:
         fi
 
     - name: Cache quibble docker image
-      uses: actions/cache@v3
+      uses: actions/cache@v5
       with:
         path: /home/runner/docker-images/${{ inputs.quibble-docker-image }}
         key: ${{ inputs.quibble-docker-image }}:${{ env.QUIBBLE_DOCKER_LATEST_TAG }}-${{ inputs.cache-key }}
@@ -116,14 +116,14 @@ runs:
 
     - name: Cache quibble coverage docker image
       if: inputs.stage == 'coverage'
-      uses: actions/cache@v3
+      uses: actions/cache@v5
       with:
         path: /home/runner/docker-images/${{ inputs.coverage-docker-image }}
         key: ${{ inputs.coverage-docker-image }}:${{ env.COVERAGE_DOCKER_LATEST_TAG }}-${{ inputs.cache-key }}
 
     - name: Cache phan docker image
       if: inputs.stage == 'phan'
-      uses: actions/cache@v3
+      uses: actions/cache@v5
       with:
         path: /home/runner/docker-images/${{ inputs.env.phan-docker-image  }}
         key: ${{ inputs.phan-docker-image }}:${{ env.PHAN_DOCKER_LATEST_TAG }}-${{ inputs.cache-key }}
@@ -149,7 +149,7 @@ runs:
         fi
 
     - name: Cache MediaWiki installation
-      uses: actions/cache@v3
+      uses: actions/cache@v5
       with:
         path: /home/runner/src
         key: ${{ runner.os }}-${{ inputs.mediawiki-version }}-${{ hashFiles('.github/workflows/dependencies') }}-${{ inputs.exclude-dependencies }}-${{ inputs.cache-key }}
@@ -218,7 +218,7 @@ runs:
         git -C src/ log -n 1 --format="%H"
 
     - name: Cache dependencies (composer)
-      uses: actions/cache@v3
+      uses: actions/cache@v5
       with:
         path: /home/runner/cache
         key: ${{ runner.os }}-${{ inputs.mediawiki-version }}-${{ hashFiles('**/*.lock') }}-${{ inputs.cache-key }}
