@@ -114,8 +114,8 @@ jobs:
 | `docker-org` | `releng` | Registry organization. |
 | `quibble-docker-image` | `quibble-buster-php81` | Image used for most stages. |
 | `coverage-docker-image` | `quibble-buster-php74-coverage` | Image used for the `coverage` stage. |
-| `phan-docker-image` | `mediawiki-phan-php81` | Image used for the `phan` stage. |
-| `php-version` | `8.1` | PHP version to set up for the `phan` stage. |
+| `phan-docker-image` | (derived) | Override for the phan image. Derived from `php-version` as `mediawiki-phan-php<version>` when empty. |
+| `php-version` | `8.1` | PHP version for the `phan` stage. Sets up host PHP for `composer install` and selects the phan image. |
 
 ## Outputs
 
