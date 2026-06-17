@@ -320,7 +320,6 @@ runs:
         PHAN_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.phan }}
       run: |
         # Phan
-        cd /home/runner
         docker run \
           -e "THING_SUBNAME=${TYPE}s/${EXTENSION_NAME}" \
           -v "$(pwd)"/src:/mediawiki \
@@ -340,7 +339,6 @@ runs:
         COVERAGE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.coverage }}
       run: |
         # Coverage
-        cd /home/runner
         if [ -d tests/phpunit ]; then
           # MW1.35+ requires PHP7.3 but quibble-coverage is not.
           if [ "${MEDIAWIKI_VERSION}" == 'master' ]; then
