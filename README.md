@@ -40,7 +40,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - uses: femiwiki/quibble-action@v1
 ```
 
@@ -81,7 +81,7 @@ jobs:
       matrix:
         mediawiki-version: [REL1_43, master]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - uses: femiwiki/quibble-action@v1
         with:
           mediawiki-version: ${{ matrix.mediawiki-version }}
@@ -95,7 +95,7 @@ jobs:
         with:
           stage: coverage
           mediawiki-version: master
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage
           path: ${{ steps.quibble.outputs.coverage }}
