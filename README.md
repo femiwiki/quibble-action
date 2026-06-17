@@ -124,8 +124,9 @@ jobs:
 
 ## Requirements
 
-A Linux runner with Docker available, for example `ubuntu-latest`. The action
-pulls and runs the Wikimedia Quibble Docker images.
+An x86-64 (`amd64`) Linux runner with Docker available, for example
+`ubuntu-latest`. The Wikimedia Quibble Docker images are published only for
+`linux/amd64`, so ARM runners (such as `ubuntu-24.04-arm`) are not supported.
 
 ## License
 
