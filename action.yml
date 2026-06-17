@@ -44,6 +44,20 @@ inputs:
     default: ""
   cache-key:
     default: true
+  upload-logs:
+    description: >-
+      Upload Quibble's logs as an artifact after the run (including on failure).
+      Off by default. Before enabling, consider that the artifact uses storage
+      (billable on private repositories), is kept for the repository's retention
+      period, and is downloadable by anyone who can view the run, so it should
+      not contain sensitive data.
+    default: false
+  log-artifact-name:
+    description: >-
+      Name for the artifact that Quibble's logs are uploaded under. Use a unique
+      name per job when running a matrix, since artifact names must be unique
+      within a workflow run.
+    default: quibble-logs
 outputs:
   coverage:
     value: /home/runner/cover
@@ -305,9 +319,9 @@ runs:
         # Prepare directories
         cd /home/runner
         # Move our repository
-        mkdir -p cache cover src/skins src/extensions
+        mkdir -p cache cover log src/skins src/extensions
         sudo cp -r "${GITHUB_WORKSPACE}" "src/${TYPE}s/${EXTENSION_NAME}"
-        chmod 777 src cache cover
+        chmod 777 src cache cover log
         # https://github.com/femiwiki/.github/issues/3
         sudo chown -R nobody:nogroup src cache
         sudo chown $(id -u):$(id -g) src cache
@@ -382,6 +396,7 @@ runs:
               -v "$(pwd)"/cache:/cache \
               -v "$(pwd)"/src:/workspace/src \
               -v "$(pwd)"/cover:/workspace/cover \
+              -v "$(pwd)"/log:/workspace/log \
               "${DOCKER_REGISTRY}/${DOCKER_ORG}/${COVERAGE_DOCKER_IMAGE}:${COVERAGE_DOCKER_LATEST_TAG}" \
               --skip-zuul \
               --skip-deps \
@@ -408,11 +423,20 @@ runs:
           -e "ZUUL_PROJECT=mediawiki/${TYPE}s/${EXTENSION_NAME}" \
           -v "$(pwd)"/cache:/cache \
           -v "$(pwd)"/src:/workspace/src \
+          -v "$(pwd)"/log:/workspace/log \
           "${DOCKER_REGISTRY}/${DOCKER_ORG}/${QUIBBLE_DOCKER_IMAGE}:${QUIBBLE_DOCKER_LATEST_TAG}" \
           --skip-zuul \
           --packages-source composer \
           --run "${STAGE}" \
           $DEPENDENCIES
+
+    - name: Upload Quibble logs
+      if: always() && inputs.upload-logs == 'true'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: ${{ inputs.log-artifact-name }}
+        path: /home/runner/log
+        if-no-files-found: ignore
 
     - shell: bash
       env:

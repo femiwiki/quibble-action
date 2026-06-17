@@ -141,6 +141,8 @@ older PHP, such as when testing an older MediaWiki branch:
 | `exclude-known-failures` | `true` | Skip dependencies that are known to fail. |
 | `exclude-dependencies` | (none) | Space-separated list of dependency names to skip. |
 | `cache-key` | `true` | Mixed into every cache key; change it to bust the caches. |
+| `upload-logs` | `false` | Upload Quibble's logs as an artifact (opt-in, captured on failure too). Mind storage cost, retention, and that the artifact is downloadable by anyone who can view the run. |
+| `log-artifact-name` | `quibble-logs` | Name for the uploaded Quibble logs artifact. |
 | `docker-registry` | `docker-registry.wikimedia.org` | Registry that hosts the images. |
 | `docker-org` | `releng` | Registry organization. |
 | `debian` | `bookworm` | Debian base for the Quibble and coverage images. |
