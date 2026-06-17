@@ -122,13 +122,13 @@ default, because only a few coverage images are published.
 
 Available bases and versions are whatever the
 [Wikimedia Docker registry](https://docker-registry.wikimedia.org/) publishes,
-so not every `debian` / `php-version` combination exists. For example, to run
-Quibble and phan on a newer PHP:
+so not every `debian` / `php-version` combination exists. For example, to pin an
+older PHP, such as when testing an older MediaWiki branch:
 
 ```yaml
       - uses: femiwiki/quibble-action@dc8d9ec9d6c86ba9805a77736c68f974d250aa8f # v1.0.0
         with:
-          debian: bullseye
+          debian: buster
           php-version: '8.3'
 ```
 
@@ -143,8 +143,8 @@ Quibble and phan on a newer PHP:
 | `cache-key` | `true` | Mixed into every cache key; change it to bust the caches. |
 | `docker-registry` | `docker-registry.wikimedia.org` | Registry that hosts the images. |
 | `docker-org` | `releng` | Registry organization. |
-| `debian` | `buster` | Debian base for the Quibble and coverage images. |
-| `php-version` | `8.1` | PHP version. Selects the `php<version>` part of every image, and the host PHP for the `phan` stage. See [Docker images](#docker-images). |
+| `debian` | `bookworm` | Debian base for the Quibble and coverage images. |
+| `php-version` | `8.4` | PHP version. Selects the `php<version>` part of every image, and the host PHP for the `phan` stage. See [Docker images](#docker-images). |
 | `quibble-docker-image` | (derived) | Override; `quibble-<debian>-php<version>` when empty. |
 | `coverage-docker-image` | `quibble-buster-php74-coverage` | Override; `quibble-<debian>-php<version>-coverage` when empty. |
 | `phan-docker-image` | (derived) | Override; `mediawiki-phan-php<version>` when empty. |

@@ -8,7 +8,7 @@ inputs:
     default: releng
   debian:
     description: Debian base for the Quibble and coverage images.
-    default: buster
+    default: bookworm
   quibble-docker-image:
     description: >-
       Override for the Quibble Docker image. When empty, it is derived as
@@ -31,7 +31,7 @@ inputs:
       and phan images, and sets up this PHP on the host for the `phan` stage's
       `composer install`. Available versions depend on the images published in
       the Wikimedia Docker registry (https://docker-registry.wikimedia.org/).
-    default: '8.1'
+    default: '8.4'
 
   mediawiki-version:
     default: REL1_45
