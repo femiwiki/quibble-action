@@ -88,7 +88,7 @@ runs:
                 # "GrowthExperiments"
               )
             fi
-            for dep in "${arr[@]}"; do
+            for dep in "${EXCLUDES[@]}"; do
               DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /${dep}$)"
             done
           fi
