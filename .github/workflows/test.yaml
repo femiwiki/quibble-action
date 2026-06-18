@@ -26,3 +26,4 @@ jobs:
         with:
           stage: phpunit-unit
           mediawiki-version: REL1_45
+          upload-logs: true
