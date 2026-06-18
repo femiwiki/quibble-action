@@ -451,6 +451,19 @@ runs:
           --run "${STAGE}" \
           $DEPENDENCIES
 
+    - name: Make Quibble logs readable
+      if: always() && inputs.upload-logs == 'true'
+      shell: bash
+      env:
+        BASE_DIR: ${{ steps.setup.outputs.dir }}
+      run: |
+        # Quibble runs in Docker as root, so some logs (for example
+        # mysql-error.log) land root-owned and unreadable by the runner user,
+        # which fails the upload step. Make the log tree readable first.
+        if [ -d "$BASE_DIR/log" ]; then
+          sudo chmod -R a+rX "$BASE_DIR/log"
+        fi
+
     - name: Upload Quibble logs
       if: always() && inputs.upload-logs == 'true'
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
