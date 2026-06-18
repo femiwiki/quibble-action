@@ -161,7 +161,7 @@ older PHP, such as when testing an older MediaWiki branch:
 
 | Name | Description |
 | --- | --- |
-| `coverage` | Path to the generated coverage directory (`/home/runner/cover`). |
+| `coverage` | Path to the generated coverage directory (`$RUNNER_TEMP/cover`). |
 
 ## Requirements
 

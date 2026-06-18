@@ -62,19 +62,23 @@ inputs:
     default: quibble-logs
 outputs:
   coverage:
-    value: /home/runner/cover
+    value: ${{ steps.setup.outputs.dir }}/cover
 runs:
   using: composite
   steps:
-    # /home/runner/cache/                               Cache
-    # /home/runner/src/                                 Mediawiki installation
-    # /home/runner/src/<TYPE>s/<EXTENSION_NAME>/        Clone of the extension repository
-    # /home/runner/docker-images/                       Docker images which exported with docker-save command
+    # $RUNNER_TEMP/cache/                               Cache
+    # $RUNNER_TEMP/src/                                 Mediawiki installation
+    # $RUNNER_TEMP/src/<TYPE>s/<EXTENSION_NAME>/        Clone of the extension repository
+    # $RUNNER_TEMP/docker-images/                       Docker images which exported with docker-save command
     # $GITHUB_WORKSPACE/.github/workflows/dependencies  Dependency extensions and skins
     - id: setup
       shell: bash
       run: |
         # Set up
+        # Base directory for all scratch dirs. RUNNER_TEMP avoids hardcoding the
+        # home path, which is not portable to self-hosted, container, or non-Linux
+        # runners, and is emptied at the start of each job.
+        echo "dir=$RUNNER_TEMP" >> "$GITHUB_OUTPUT"
         if [ -e extension.json ]; then
           echo "type=extension" >> "$GITHUB_OUTPUT"
           echo "name=$(jq -r .name extension.json)" >> "$GITHUB_OUTPUT"
@@ -171,19 +175,20 @@ runs:
     - name: Cache quibble docker image
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
-        path: /home/runner/docker-images/${{ steps.tags.outputs.quibble_image }}
+        path: ${{ steps.setup.outputs.dir }}/docker-images/${{ steps.tags.outputs.quibble_image }}
         key: ${{ steps.tags.outputs.quibble_image }}:${{ steps.tags.outputs.quibble }}-${{ inputs.cache-key }}
 
     - shell: bash
       env:
+        BASE_DIR: ${{ steps.setup.outputs.dir }}
         QUIBBLE_DOCKER_IMAGE: ${{ steps.tags.outputs.quibble_image }}
         DOCKER_REGISTRY: ${{ inputs.docker-registry }}
         DOCKER_ORG: ${{ inputs.docker-org }}
         QUIBBLE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.quibble }}
       run: |
         # Load or pull quibble docker image
-        if [ -f /home/runner/docker-images/"${QUIBBLE_DOCKER_IMAGE}" ]; then
-          docker load -i /home/runner/docker-images/"${QUIBBLE_DOCKER_IMAGE}"
+        if [ -f "${BASE_DIR}"/docker-images/"${QUIBBLE_DOCKER_IMAGE}" ]; then
+          docker load -i "${BASE_DIR}"/docker-images/"${QUIBBLE_DOCKER_IMAGE}"
         else
           docker pull "${DOCKER_REGISTRY}/${DOCKER_ORG}/${QUIBBLE_DOCKER_IMAGE}:${QUIBBLE_DOCKER_LATEST_TAG}"
         fi
@@ -192,27 +197,28 @@ runs:
       if: inputs.stage == 'coverage'
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
-        path: /home/runner/docker-images/${{ steps.tags.outputs.coverage_image }}
+        path: ${{ steps.setup.outputs.dir }}/docker-images/${{ steps.tags.outputs.coverage_image }}
         key: ${{ steps.tags.outputs.coverage_image }}:${{ steps.tags.outputs.coverage }}-${{ inputs.cache-key }}
 
     - name: Cache phan docker image
       if: inputs.stage == 'phan'
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
-        path: /home/runner/docker-images/${{ steps.tags.outputs.phan_image }}
+        path: ${{ steps.setup.outputs.dir }}/docker-images/${{ steps.tags.outputs.phan_image }}
         key: ${{ steps.tags.outputs.phan_image }}:${{ steps.tags.outputs.phan }}-${{ inputs.cache-key }}
 
     - if: inputs.stage == 'coverage'
       shell: bash
       env:
+        BASE_DIR: ${{ steps.setup.outputs.dir }}
         COVERAGE_DOCKER_IMAGE: ${{ steps.tags.outputs.coverage_image }}
         DOCKER_REGISTRY: ${{ inputs.docker-registry }}
         DOCKER_ORG: ${{ inputs.docker-org }}
         COVERAGE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.coverage }}
       run: |
         # Load or pull quibble coverage docker image
-        if [ -f /home/runner/docker-images/"${COVERAGE_DOCKER_IMAGE}" ]; then
-          docker load -i /home/runner/docker-images/"${COVERAGE_DOCKER_IMAGE}"
+        if [ -f "${BASE_DIR}"/docker-images/"${COVERAGE_DOCKER_IMAGE}" ]; then
+          docker load -i "${BASE_DIR}"/docker-images/"${COVERAGE_DOCKER_IMAGE}"
         else
           docker pull "${DOCKER_REGISTRY}/${DOCKER_ORG}/${COVERAGE_DOCKER_IMAGE}:${COVERAGE_DOCKER_LATEST_TAG}"
         fi
@@ -220,14 +226,15 @@ runs:
     - if: inputs.stage == 'phan'
       shell: bash
       env:
+        BASE_DIR: ${{ steps.setup.outputs.dir }}
         PHAN_DOCKER_IMAGE: ${{ steps.tags.outputs.phan_image }}
         DOCKER_REGISTRY: ${{ inputs.docker-registry }}
         DOCKER_ORG: ${{ inputs.docker-org }}
         PHAN_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.phan }}
       run: |
         # Load or pull phan docker image
-        if [ -f /home/runner/docker-images/"${PHAN_DOCKER_IMAGE}" ]; then
-          docker load -i /home/runner/docker-images/"${PHAN_DOCKER_IMAGE}"
+        if [ -f "${BASE_DIR}"/docker-images/"${PHAN_DOCKER_IMAGE}" ]; then
+          docker load -i "${BASE_DIR}"/docker-images/"${PHAN_DOCKER_IMAGE}"
         else
           docker pull "${DOCKER_REGISTRY}/${DOCKER_ORG}/${PHAN_DOCKER_IMAGE}:${PHAN_DOCKER_LATEST_TAG}"
         fi
@@ -235,16 +242,17 @@ runs:
     - name: Cache MediaWiki installation
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
-        path: /home/runner/src
+        path: ${{ steps.setup.outputs.dir }}/src
         key: ${{ runner.os }}-${{ inputs.mediawiki-version }}-${{ hashFiles('.github/workflows/dependencies') }}-${{ inputs.exclude-dependencies }}-${{ inputs.cache-key }}
 
     - shell: bash
       env:
+        BASE_DIR: ${{ steps.setup.outputs.dir }}
         MEDIAWIKI_VERSION: ${{ inputs.mediawiki-version }}
         DEPENDENCIES: ${{ steps.deps.outputs.dependencies }}
       run: |
         # Download MediaWiki and extensions
-        cd /home/runner
+        cd "$BASE_DIR"
         if [ ! -d src ]; then
           git clone -b "${MEDIAWIKI_VERSION}" --depth 1 https://gerrit.wikimedia.org/r/mediawiki/core src
           git clone --recurse-submodules -b "${MEDIAWIKI_VERSION}" --depth 1 https://gerrit.wikimedia.org/r/mediawiki/skins/Vector src/skins/Vector
@@ -307,7 +315,7 @@ runs:
     - name: Cache dependencies (composer)
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
-        path: /home/runner/cache
+        path: ${{ steps.setup.outputs.dir }}/cache
         key: ${{ runner.os }}-${{ inputs.mediawiki-version }}-${{ hashFiles('**/*.lock') }}-${{ inputs.cache-key }}
 
     - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
@@ -325,11 +333,12 @@ runs:
 
     - shell: bash
       env:
+        BASE_DIR: ${{ steps.setup.outputs.dir }}
         TYPE: ${{ steps.setup.outputs.type }}
         EXTENSION_NAME: ${{ steps.setup.outputs.name }}
       run: |
         # Prepare directories
-        cd /home/runner
+        cd "$BASE_DIR"
         # Move our repository
         mkdir -p cache cover log src/skins src/extensions
         sudo cp -r "${GITHUB_WORKSPACE}" "src/${TYPE}s/${EXTENSION_NAME}"
@@ -340,7 +349,7 @@ runs:
 
     - if: inputs.stage == 'phan' || inputs.stage == 'coverage'
       shell: bash
-      working-directory: /home/runner
+      working-directory: ${{ steps.setup.outputs.dir }}
       env:
         TYPE: ${{ steps.setup.outputs.type }}
         EXTENSION_NAME: ${{ steps.setup.outputs.name }}
@@ -365,7 +374,7 @@ runs:
 
     - if: inputs.stage == 'phan'
       shell: bash
-      working-directory: /home/runner
+      working-directory: ${{ steps.setup.outputs.dir }}
       env:
         TYPE: ${{ steps.setup.outputs.type }}
         EXTENSION_NAME: ${{ steps.setup.outputs.name }}
@@ -383,7 +392,7 @@ runs:
 
     - if: inputs.stage == 'coverage'
       shell: bash
-      working-directory: /home/runner
+      working-directory: ${{ steps.setup.outputs.dir }}
       env:
         MEDIAWIKI_VERSION: ${{ inputs.mediawiki-version }}
         TYPE: ${{ steps.setup.outputs.type }}
@@ -418,7 +427,7 @@ runs:
 
     - if: inputs.stage != 'phan' && inputs.stage != 'coverage'
       shell: bash
-      working-directory: /home/runner
+      working-directory: ${{ steps.setup.outputs.dir }}
       env:
         TYPE: ${{ steps.setup.outputs.type }}
         EXTENSION_NAME: ${{ steps.setup.outputs.name }}
@@ -447,7 +456,7 @@ runs:
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: ${{ inputs.log-artifact-name }}
-        path: /home/runner/log
+        path: ${{ steps.setup.outputs.dir }}/log
         if-no-files-found: ignore
 
     - shell: bash
@@ -462,9 +471,10 @@ runs:
         QUIBBLE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.quibble }}
         PHAN_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.phan }}
         COVERAGE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.coverage }}
+        BASE_DIR: ${{ steps.setup.outputs.dir }}
       run: |
         # Tear down
-        cd /home/runner
+        cd "$BASE_DIR"
         sudo rm -rf "src/${TYPE}s/${EXTENSION_NAME}"
         # See https://doc.wikimedia.org/quibble/index.html#remove-localsettings-php-between-runs
         rm "$(pwd)"/src/LocalSettings.php || true
