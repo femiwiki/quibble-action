@@ -10,20 +10,21 @@ jobs:
     name: phpunit-unit on BoilerPlate
     runs-on: ubuntu-latest
     steps:
-      # The action treats the workspace root as the extension/skin under test, so
-      # check out a real minimal extension (BoilerPlate) there, and the action
-      # under test into a subdirectory referenced via `uses: ./_action`.
+      # Check the action out at the workspace root so it can be used as `uses: ./`,
+      # and the real minimal extension under test (BoilerPlate) into a subdirectory
+      # pointed at by the action's `project-path` input.
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           repository: wikimedia/mediawiki-extensions-BoilerPlate
           ref: REL1_45
+          path: project
           persist-credentials: false
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          path: _action
-          persist-credentials: false
-      - uses: ./_action
+      - uses: ./
         with:
           stage: phpunit-unit
           mediawiki-version: REL1_45
+          project-path: project
           upload-logs: true

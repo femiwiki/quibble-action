@@ -87,6 +87,26 @@ jobs:
           mediawiki-version: ${{ matrix.mediawiki-version }}
 ```
 
+### Testing from the same repository
+
+By default the action treats the workspace root as the project under test, so a
+consumer just checks out their repository and runs the action. When the action
+itself lives at the workspace root, for example to test it as `uses: ./`, check
+the project under test out into a subdirectory and point `project-path` at it:
+
+```yaml
+      # The action under test at the workspace root, so it can be `uses: ./`.
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      # The extension or skin under test in a subdirectory.
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          repository: my-org/MyExtension
+          path: project
+      - uses: ./
+        with:
+          project-path: project
+```
+
 ### Publishing coverage
 
 ```yaml
@@ -144,6 +164,7 @@ older PHP, such as when testing an older MediaWiki branch:
 | --- | --- | --- |
 | `mediawiki-version` | `REL1_45` | MediaWiki branch to test against, for example `master` or `REL1_43`. |
 | `stage` | `all` | Stage to run. Any Quibble stage, or `phan` / `coverage`. |
+| `project-path` | `.` | Path to the extension or skin under test, relative to the workspace. Set it when the action is checked out at the workspace root (so it can be used as `uses: ./`) and the project is in a subdirectory. See [Testing from the same repository](#testing-from-the-same-repository). |
 | `exclude-known-failures` | `true` | Skip dependencies that are known to fail. |
 | `exclude-dependencies` | (none) | Space-separated list of dependency names to skip. |
 | `cache-key` | `true` | Mixed into every cache key; change it to bust the caches. |
