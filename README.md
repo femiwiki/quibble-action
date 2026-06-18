@@ -120,6 +120,12 @@ For example, `debian: buster` with `php-version: '8.1'` derives
 derived by default; it falls back to its explicit `coverage-docker-image`
 default, because only a few coverage images are published.
 
+`php-version` defaults to `8.4`, except for the `api-testing` stage, which
+defaults to `8.3`. That stage requires the wikidiff2 PHP extension, and the only
+published Quibble image that bundles it is `quibble-bookworm-php83`. Setting
+`php-version` (or `quibble-docker-image`) explicitly overrides this, but
+api-testing will fail on an image without wikidiff2.
+
 Available bases and versions are whatever the
 [Wikimedia Docker registry](https://docker-registry.wikimedia.org/) publishes,
 so not every `debian` / `php-version` combination exists. For example, to pin an
@@ -146,7 +152,7 @@ older PHP, such as when testing an older MediaWiki branch:
 | `docker-registry` | `docker-registry.wikimedia.org` | Registry that hosts the images. |
 | `docker-org` | `releng` | Registry organization. |
 | `debian` | `bookworm` | Debian base for the Quibble and coverage images. |
-| `php-version` | `8.4` | PHP version. Selects the `php<version>` part of every image, and the host PHP for the `phan` stage. See [Docker images](#docker-images). |
+| `php-version` | `8.4` (`8.3` for `api-testing`) | PHP version. Selects the `php<version>` part of every image, and the host PHP for the `phan` stage. See [Docker images](#docker-images). |
 | `quibble-docker-image` | (derived) | Override; `quibble-<debian>-php<version>` when empty. |
 | `coverage-docker-image` | `quibble-buster-php74-coverage` | Override; `quibble-<debian>-php<version>-coverage` when empty. |
 | `phan-docker-image` | (derived) | Override; `mediawiki-phan-php<version>` when empty. |

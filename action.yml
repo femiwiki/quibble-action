@@ -31,7 +31,9 @@ inputs:
       and phan images, and sets up this PHP on the host for the `phan` stage's
       `composer install`. Available versions depend on the images published in
       the Wikimedia Docker registry (https://docker-registry.wikimedia.org/).
-    default: '8.4'
+      When empty it is derived: `8.3` for the `api-testing` stage (the only
+      image bundling wikidiff2, which that stage requires), `8.4` otherwise.
+    default: ""
 
   mediawiki-version:
     default: REL1_45
@@ -96,8 +98,18 @@ runs:
         PHAN_IMAGE_OVERRIDE: ${{ inputs.phan-docker-image }}
         STAGE: ${{ inputs.stage }}
       run: |
+        # Resolve the effective PHP version, unless overridden.
+        # api-testing needs wikidiff2, bundled only in quibble-bookworm-php83.
+        if [ -n "${PHP_VERSION}" ]; then
+          php_version="${PHP_VERSION}"
+        elif [ "${STAGE}" == 'api-testing' ]; then
+          php_version='8.3'
+        else
+          php_version='8.4'
+        fi
+        echo "php_version=${php_version}" >> "$GITHUB_OUTPUT"
         # Resolve the Docker images from php-version and debian, unless overridden
-        php="php${PHP_VERSION//./}"
+        php="php${php_version//./}"
         QUIBBLE_DOCKER_IMAGE="${QUIBBLE_IMAGE_OVERRIDE:-quibble-${DEBIAN}-${php}}"
         COVERAGE_DOCKER_IMAGE="${COVERAGE_IMAGE_OVERRIDE:-quibble-${DEBIAN}-${php}-coverage}"
         PHAN_DOCKER_IMAGE="${PHAN_IMAGE_OVERRIDE:-mediawiki-phan-${php}}"
@@ -301,7 +313,7 @@ runs:
     - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
       if: inputs.stage == 'phan'
       with:
-        php-version: ${{ inputs.php-version }}
+        php-version: ${{ steps.tags.outputs.php_version }}
 
     - if: inputs.stage == 'phan'
       shell: bash
