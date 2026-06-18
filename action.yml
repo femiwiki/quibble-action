@@ -35,6 +35,13 @@ inputs:
       image bundling wikidiff2, which that stage requires), `8.4` otherwise.
     default: ""
 
+  project-path:
+    description: >-
+      Path to the extension or skin under test, relative to the workspace.
+      Defaults to the workspace root. Set this when the action itself is checked
+      out at the workspace root (so it can be referenced as `uses: ./`) and the
+      project under test is checked out into a subdirectory.
+    default: "."
   mediawiki-version:
     default: REL1_45
   stage:
@@ -70,15 +77,20 @@ runs:
     # $RUNNER_TEMP/src/                                 Mediawiki installation
     # $RUNNER_TEMP/src/<TYPE>s/<EXTENSION_NAME>/        Clone of the extension repository
     # $RUNNER_TEMP/docker-images/                       Docker images which exported with docker-save command
-    # $GITHUB_WORKSPACE/.github/workflows/dependencies  Dependency extensions and skins
+    # <path>/.github/workflows/dependencies            Dependency extensions and skins
     - id: setup
       shell: bash
+      env:
+        PROJECT_PATH: ${{ inputs.project-path }}
       run: |
         # Set up
         # Base directory for all scratch dirs. RUNNER_TEMP avoids hardcoding the
         # home path, which is not portable to self-hosted, container, or non-Linux
         # runners, and is emptied at the start of each job.
         echo "dir=$RUNNER_TEMP" >> "$GITHUB_OUTPUT"
+        # The project under test lives at inputs.project-path, which may be a
+        # subdirectory when the action is checked out at the workspace root.
+        cd "$PROJECT_PATH"
         if [ -e extension.json ]; then
           echo "type=extension" >> "$GITHUB_OUTPUT"
           echo "name=$(jq -r .name extension.json)" >> "$GITHUB_OUTPUT"
@@ -142,8 +154,10 @@ runs:
         EXCLUDE_KNOWN_FAILURES: ${{ inputs.exclude-known-failures }}
         MEDIAWIKI_VERSION: ${{ inputs.mediawiki-version }}
         EXCLUDE_DEPENDENCIES: ${{ inputs.exclude-dependencies }}
+        PROJECT_PATH: ${{ inputs.project-path }}
       run: |
         # Resolve dependencies
+        cd "$PROJECT_PATH"
         if [ -e .github/workflows/dependencies ]; then
           cd .github/workflows
           curl -sLO https://raw.githubusercontent.com/wikimedia/integration-config/master/zuul/dependencies.yaml
@@ -243,7 +257,7 @@ runs:
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: ${{ steps.setup.outputs.dir }}/src
-        key: ${{ runner.os }}-${{ inputs.mediawiki-version }}-${{ hashFiles('.github/workflows/dependencies') }}-${{ inputs.exclude-dependencies }}-${{ inputs.cache-key }}
+        key: ${{ runner.os }}-${{ inputs.mediawiki-version }}-${{ hashFiles(format('{0}/.github/workflows/dependencies', inputs.project-path)) }}-${{ inputs.exclude-dependencies }}-${{ inputs.cache-key }}
 
     - shell: bash
       env:
@@ -325,10 +339,13 @@ runs:
 
     - if: inputs.stage == 'phan'
       shell: bash
+      env:
+        PROJECT_PATH: ${{ inputs.project-path }}
       run: |
         # Composer install
+        cd "$PROJECT_PATH"
         if [ -e composer.json ]; then
-          composer install --prefer-dist --no-progress --no-interaction # $GITHUB_WORKSPACE
+          composer install --prefer-dist --no-progress --no-interaction
         fi
 
     - shell: bash
@@ -336,12 +353,15 @@ runs:
         BASE_DIR: ${{ steps.setup.outputs.dir }}
         TYPE: ${{ steps.setup.outputs.type }}
         EXTENSION_NAME: ${{ steps.setup.outputs.name }}
+        PROJECT_PATH: ${{ inputs.project-path }}
       run: |
         # Prepare directories
+        # Resolve the project dir before changing into the scratch base.
+        project_dir="$(cd "${GITHUB_WORKSPACE}/${PROJECT_PATH}" && pwd)"
         cd "$BASE_DIR"
         # Move our repository
         mkdir -p cache cover log src/skins src/extensions
-        sudo cp -r "${GITHUB_WORKSPACE}" "src/${TYPE}s/${EXTENSION_NAME}"
+        sudo cp -r "$project_dir" "src/${TYPE}s/${EXTENSION_NAME}"
         chmod 777 src cache cover log
         # https://github.com/femiwiki/.github/issues/3
         sudo chown -R nobody:nogroup src cache
