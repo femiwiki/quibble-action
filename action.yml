@@ -7,7 +7,7 @@ inputs:
   docker-org:
     default: releng
   debian:
-    description: Debian base for the Quibble and coverage images.
+    description: Debian base for the Quibble image.
     default: bookworm
   quibble-docker-image:
     description: >-
@@ -16,10 +16,10 @@ inputs:
     default: ""
   coverage-docker-image:
     description: >-
-      Override for the coverage Docker image. When empty, it is derived as
-      `quibble-<debian>-php<version>-coverage`. Defaults to an explicit image
-      because few coverage images are published.
-    default: quibble-buster-php74-coverage
+      Override for the coverage Docker image. Defaults to `quibble-coverage`,
+      the single pcov-based image Wikimedia CI uses for PHPUnit coverage (it
+      replaced the old per-PHP `quibble-<debian>-php<version>-coverage` images).
+    default: quibble-coverage
   phan-docker-image:
     description: >-
       Override for the phan Docker image. When empty, it is derived from
@@ -27,8 +27,8 @@ inputs:
     default: ""
   php-version:
     description: >-
-      PHP version. Selects the `php<version>` part of the Quibble, coverage,
-      and phan images, and sets up this PHP on the host for the `phan` stage's
+      PHP version. Selects the `php<version>` part of the Quibble and phan
+      images, and sets up this PHP on the host for the `phan` stage's
       `composer install`. Available versions depend on the images published in
       the Wikimedia Docker registry (https://docker-registry.wikimedia.org/).
       When empty it is derived: `8.3` for the `api-testing` stage (the only
@@ -127,7 +127,9 @@ runs:
         # Resolve the Docker images from php-version and debian, unless overridden
         php="php${php_version//./}"
         QUIBBLE_DOCKER_IMAGE="${QUIBBLE_IMAGE_OVERRIDE:-quibble-${DEBIAN}-${php}}"
-        COVERAGE_DOCKER_IMAGE="${COVERAGE_IMAGE_OVERRIDE:-quibble-${DEBIAN}-${php}-coverage}"
+        # Coverage uses the single pcov-based quibble-coverage image (not a
+        # per-debian/php variant), matching current Wikimedia CI.
+        COVERAGE_DOCKER_IMAGE="${COVERAGE_IMAGE_OVERRIDE:-quibble-coverage}"
         PHAN_DOCKER_IMAGE="${PHAN_IMAGE_OVERRIDE:-mediawiki-phan-${php}}"
         echo "quibble_image=${QUIBBLE_DOCKER_IMAGE}" >> "$GITHUB_OUTPUT"
         echo "coverage_image=${COVERAGE_DOCKER_IMAGE}" >> "$GITHUB_OUTPUT"
@@ -423,26 +425,28 @@ runs:
         COVERAGE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.coverage }}
       run: |
         # Coverage
-        if [ -d tests/phpunit ]; then
-          # MW1.35+ requires PHP7.3 but quibble-coverage is not.
-          if [ "${MEDIAWIKI_VERSION}" == 'master' ]; then
-            if [ "${TYPE}" == 'skin' ]; then
-              COMMAND=mwskin-phpunit-coverage
-            else
-              COMMAND=mwext-phpunit-coverage
-            fi
-            docker run \
-              --entrypoint quibble-with-supervisord \
-              -e "ZUUL_PROJECT=mediawiki/${TYPE}s/${EXTENSION_NAME}" \
-              -v "$(pwd)"/cache:/cache \
-              -v "$(pwd)"/src:/workspace/src \
-              -v "$(pwd)"/cover:/workspace/cover \
-              -v "$(pwd)"/log:/workspace/log \
-              "${DOCKER_REGISTRY}/${DOCKER_ORG}/${COVERAGE_DOCKER_IMAGE}:${COVERAGE_DOCKER_LATEST_TAG}" \
-              --skip-zuul \
-              --skip-deps \
-              -c "${COMMAND}"
+        # MediaWiki's coverage helper (tests/phpunit/generatePHPUnitConfig.php,
+        # invoked by mw{ext,skin}-phpunit-coverage) currently exists only on the
+        # master branch, so coverage requires mediawiki-version: master.
+        if [ "${MEDIAWIKI_VERSION}" != 'master' ]; then
+          echo "::warning::Skipping coverage: it requires mediawiki-version: master (MediaWiki's coverage tooling lives only in master)."
+        elif [ -d "src/${TYPE}s/${EXTENSION_NAME}/tests/phpunit" ]; then
+          if [ "${TYPE}" == 'skin' ]; then
+            COMMAND=mwskin-phpunit-coverage
+          else
+            COMMAND=mwext-phpunit-coverage
           fi
+          docker run \
+            --entrypoint quibble-with-supervisord \
+            -e "ZUUL_PROJECT=mediawiki/${TYPE}s/${EXTENSION_NAME}" \
+            -v "$(pwd)"/cache:/cache \
+            -v "$(pwd)"/src:/workspace/src \
+            -v "$(pwd)"/cover:/workspace/cover \
+            -v "$(pwd)"/log:/workspace/log \
+            "${DOCKER_REGISTRY}/${DOCKER_ORG}/${COVERAGE_DOCKER_IMAGE}:${COVERAGE_DOCKER_LATEST_TAG}" \
+            --skip-zuul \
+            --skip-deps \
+            -c "${COMMAND}"
         fi
 
     - if: inputs.stage != 'phan' && inputs.stage != 'coverage'

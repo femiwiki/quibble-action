@@ -28,3 +28,33 @@ jobs:
           mediawiki-version: REL1_45
           project-path: project
           upload-logs: true
+
+  coverage:
+    name: coverage on BoilerPlate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      # Coverage requires the master MediaWiki branch (that is where MediaWiki's
+      # coverage tooling lives), so test BoilerPlate's master branch against it.
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          repository: wikimedia/mediawiki-extensions-BoilerPlate
+          ref: master
+          path: project
+          persist-credentials: false
+      - id: quibble
+        uses: ./
+        with:
+          stage: coverage
+          mediawiki-version: master
+          project-path: project
+      # The coverage stage was pinned to the discontinued php74 image and so could
+      # never run; this asserts it now produces a report with quibble-coverage.
+      - name: Assert a coverage report was produced
+        env:
+          COVER_DIR: ${{ steps.quibble.outputs.coverage }}
+        run: |
+          ls -la "$COVER_DIR"
+          test -n "$(ls -A "$COVER_DIR" 2>/dev/null)"

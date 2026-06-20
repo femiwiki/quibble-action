@@ -59,7 +59,9 @@ one of the two extra modes this action adds:
   `selenium`, `qunit`);
 - `phan` runs [Phan] static analysis instead of Quibble;
 - `coverage` runs PHPUnit code coverage and exposes the report through the
-  `coverage` output. It only runs on the `master` MediaWiki branch.
+  `coverage` output. It requires `mediawiki-version: master`, because
+  MediaWiki's coverage tooling (`tests/phpunit/generatePHPUnitConfig.php`)
+  currently lives only in the master branch; on other branches it is skipped.
 
 [Quibble stages documentation]: https://doc.wikimedia.org/quibble/usage.html#stages
 
@@ -125,20 +127,20 @@ the project under test out into a subdirectory and point `project-path` at it:
 
 Every stage runs in an official Wikimedia image, pulled as
 `<docker-registry>/<docker-org>/<image>:<tag>`. By default the `<image>` is
-derived from `php-version` (and `debian` for Quibble and coverage), so you
-usually only set those two knobs. Any image can also be pinned explicitly with
-its `*-docker-image` input, which takes precedence over the derivation.
+derived from `php-version` (and `debian` for Quibble), so you usually only set
+those two knobs. Any image can also be pinned explicitly with its
+`*-docker-image` input, which takes precedence over the derivation.
 
-| Stage | Derived image | Override input |
+| Stage | Image | Override input |
 | --- | --- | --- |
 | Quibble (`all` and individual stages) | `quibble-<debian>-php<version>` | `quibble-docker-image` |
-| `coverage` | `quibble-<debian>-php<version>-coverage` | `coverage-docker-image` |
+| `coverage` | `quibble-coverage` | `coverage-docker-image` |
 | `phan` | `mediawiki-phan-php<version>` | `phan-docker-image` |
 
 For example, `debian: buster` with `php-version: '8.1'` derives
-`quibble-buster-php81` and `mediawiki-phan-php81`. The coverage image is not
-derived by default; it falls back to its explicit `coverage-docker-image`
-default, because only a few coverage images are published.
+`quibble-buster-php81` and `mediawiki-phan-php81`. Coverage is not derived from
+`debian`/`php-version`: it uses the single `quibble-coverage` image (pcov-based,
+the one Wikimedia CI uses), which replaced the old per-PHP coverage images.
 
 `php-version` defaults to `8.4`, except for the `api-testing` stage, which
 defaults to `8.3`. That stage requires the wikidiff2 PHP extension, and the only
@@ -172,10 +174,10 @@ older PHP, such as when testing an older MediaWiki branch:
 | `log-artifact-name` | `quibble-logs` | Name for the uploaded Quibble logs artifact. |
 | `docker-registry` | `docker-registry.wikimedia.org` | Registry that hosts the images. |
 | `docker-org` | `releng` | Registry organization. |
-| `debian` | `bookworm` | Debian base for the Quibble and coverage images. |
+| `debian` | `bookworm` | Debian base for the Quibble image. |
 | `php-version` | `8.4` (`8.3` for `api-testing`) | PHP version. Selects the `php<version>` part of every image, and the host PHP for the `phan` stage. See [Docker images](#docker-images). |
 | `quibble-docker-image` | (derived) | Override; `quibble-<debian>-php<version>` when empty. |
-| `coverage-docker-image` | `quibble-buster-php74-coverage` | Override; `quibble-<debian>-php<version>-coverage` when empty. |
+| `coverage-docker-image` | `quibble-coverage` | Override for the single pcov-based coverage image. |
 | `phan-docker-image` | (derived) | Override; `mediawiki-phan-php<version>` when empty. |
 
 ## Outputs
