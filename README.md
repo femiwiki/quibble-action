@@ -21,9 +21,10 @@ for. It can also run [Phan] static analysis and PHPUnit code coverage.
    from the checked-out repository to decide whether it is testing an extension
    or a skin, and under which name. When neither file is present it falls back
    to the Vector skin.
-2. **Resolves dependencies.** If a `.github/workflows/dependencies` file exists,
-   the action resolves the full dependency tree from the Wikimedia
-   `integration-config` and clones each extension or skin into place.
+2. **Resolves dependencies.** Dependency extensions and skins are read from the
+   `dependencies` input, the `requires` clause of `extension.json`/`skin.json`,
+   or the phan config, and cloned into place. See
+   [Defining dependencies](#defining-dependencies).
 3. **Restores caches.** The Docker images, the MediaWiki checkout, and the
    Composer cache are all cached between runs.
 4. **Runs the stage.** Quibble runs the requested stage inside the Docker image,
@@ -65,13 +66,28 @@ one of the two extra modes this action adds:
 
 [Quibble stages documentation]: https://doc.wikimedia.org/quibble/usage.html#stages
 
-### Declaring dependencies
+### Defining dependencies
 
-List the extensions and skins your project needs in
-`.github/workflows/dependencies`, in the Wikimedia `integration-config` format.
-The action resolves the transitive dependency tree and clones everything before
-testing. Use `exclude-dependencies` to drop specific ones, or
-`exclude-known-failures` to skip the dependencies this action knows to be flaky.
+Dependency extensions and skins are resolved from the **first** of these sources
+that yields anything:
+
+1. **The `dependencies` input** — a whitespace/comma separated list:
+
+   ```yaml
+   with:
+     dependencies: Foo Bar skins/Vector
+   ```
+
+   Entries may be bare names (`Foo` → `mediawiki/extensions/Foo`), short prefixed
+   paths (`skins/Vector`), or full Gerrit paths.
+
+2. **The `requires` clause of `extension.json` / `skin.json`** — the
+   `requires.extensions` and `requires.skins` keys.
+
+3. **The phan config (`.phan/config.php`)** — `../../extensions/<Name>` and
+   `../../skins/<Name>` entries in the directory/file list.
+
+Use `exclude-dependencies` to drop specific resolved entries by name.
 
 ### Testing several MediaWiki versions
 
@@ -167,7 +183,7 @@ older PHP, such as when testing an older MediaWiki branch:
 | `mediawiki-version` | `REL1_45` | MediaWiki branch to test against, for example `master` or `REL1_43`. |
 | `stage` | `all` | Stage to run. Any Quibble stage, or `phan` / `coverage`. |
 | `project-path` | `.` | Path to the extension or skin under test, relative to the workspace. Set it when the action is checked out at the workspace root (so it can be used as `uses: ./`) and the project is in a subdirectory. See [Testing from the same repository](#testing-from-the-same-repository). |
-| `exclude-known-failures` | `true` | Skip dependencies that are known to fail. |
+| `dependencies` | (none) | Whitespace/comma separated dependency extensions/skins. Takes priority over the `requires` clause and phan config. See [Defining dependencies](#defining-dependencies). |
 | `exclude-dependencies` | (none) | Space-separated list of dependency names to skip. |
 | `cache-key` | `true` | Mixed into every cache key; change it to bust the caches. |
 | `upload-logs` | `false` | Upload Quibble's logs as an artifact (opt-in, captured on failure too). Mind storage cost, retention, and that the artifact is downloadable by anyone who can view the run. |

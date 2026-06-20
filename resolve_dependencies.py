@@ -1,54 +1,98 @@
-# A script to resolve dependencies of MediaWiki extension for Quibble test
+# A script to resolve dependencies of a MediaWiki extension/skin for Quibble.
+#
+# Dependencies are resolved from the first source that yields anything, in this
+# priority order:
+#
+#   1. The `dependencies` action input (passed as the first CLI argument).
+#   2. The `requires` clause of extension.json / skin.json.
+#   3. The phan configuration (.phan/config.php).
+#
+# Each resolved dependency is printed as a Gerrit project path, one per line:
+#
+#   mediawiki/extensions/Foo
+#   mediawiki/skins/Bar
+import json
+import os
+import re
 import sys
-import yaml
 
-# parameter_functions for https://raw.githubusercontent.com/wikimedia/integration-config/master/zuul/parameter_functions.py
-from parameter_functions import dependencies, get_dependencies
 
-# Get dependency file path from argument
-dependencies_file = sys.argv[1]
+def normalize(name, kind='extensions'):
+    """Return a Gerrit project path for a single dependency.
 
-recurse = True  # Default to recursion
-if len(sys.argv) >= 3 and sys.argv[2] == '--no-recurse':
-    recurse = False
+    `name` may be a bare extension/skin name (`Foo`), a short prefixed path
+    (`skins/Bar`) or an already-qualified Gerrit path (`mediawiki/...`).
+    """
+    name = name.strip().strip('/')
+    if not name:
+        return None
+    if name.startswith('mediawiki/'):
+        return name
+    if '/' in name:
+        return 'mediawiki/' + name
+    return 'mediawiki/{}/{}'.format(kind, name)
 
-# Add dependencies of target extension
-with open(dependencies_file, 'r') as f:
-    dependencies['ext'] = yaml.load(f, Loader=yaml.SafeLoader)
 
-# Define rules for exclusions and inclusions
-branch_rules = {
-    'REL1_42': {
-        'exclude': {
-            'CommunityConfiguration': 'Fails without CommunityConfigurationExample on REL1_42',
-            'CommunityConfigurationExample': 'Does not exist on REL1_42',
-        },
-    },
-    'only': {
-        'DiscussionTools': {
-            'branches': ['master'],
-            'reason': 'Inconsistently failing',
-        },
-    },
-}
+def from_input(raw):
+    """Dependencies listed explicitly in the `dependencies` action input."""
+    deps = []
+    for token in re.split(r'[\s,]+', raw or ''):
+        dep = normalize(token)
+        if dep:
+            deps.append(dep)
+    return deps
 
-# Resolve dependencies
-resolved_dependencies = []
-for d in get_dependencies('ext', dependencies, recurse):
-    repo = ''
-    branch = ''
-    if d in dependencies['ext']:
-        if 'repo' in dependencies['ext'][d] and dependencies['ext'][d]['repo'] != 'auto':
-            repo = '|' + dependencies['ext'][d]['repo']
-        if 'branch' in dependencies['ext'][d] and dependencies['ext'][d]['branch'] != 'auto':
-            branch = dependencies['ext'][d]['branch']
 
-    if branch:
-        branch = '|' + branch
+def from_requires():
+    """Dependencies declared in the `requires` clause of the manifest."""
+    deps = []
+    for filename in ('extension.json', 'skin.json'):
+        if not os.path.exists(filename):
+            continue
+        with open(filename, 'r') as f:
+            requires = json.load(f).get('requires', {})
+        for name in requires.get('extensions', {}):
+            deps.append(normalize(name, 'extensions'))
+        for name in requires.get('skins', {}):
+            deps.append(normalize(name, 'skins'))
+    return deps
 
-    d = 'mediawiki/extensions/' + d
-    d = d.replace('/extensions/skins/', '/skins/')
-    d = d + repo + branch
-    resolved_dependencies.append(d)
 
-print('\n'.join(resolved_dependencies))
+def from_phan(path='.phan/config.php'):
+    """Dependencies inferred from a MediaWiki phan config's directory list."""
+    if not os.path.exists(path):
+        return []
+    with open(path, 'r') as f:
+        content = f.read()
+    deps = []
+    # Match paths such as '../../extensions/Foo' or '../../skins/Bar' that a
+    # MediaWiki phan config adds to its directory_list / file_list.
+    for kind, name in re.findall(
+        r'\.\./\.\./(extensions|skins)/([A-Za-z0-9_./-]+)', content
+    ):
+        deps.append(normalize(name.split('/')[0], kind))
+    return deps
+
+
+def main():
+    raw_input = sys.argv[1] if len(sys.argv) > 1 else ''
+
+    resolved = []
+    for source in (from_input(raw_input), from_requires(), from_phan()):
+        if source:
+            resolved = source
+            break
+
+    # Deduplicate while preserving order.
+    seen = set()
+    unique = []
+    for dep in resolved:
+        if dep and dep not in seen:
+            seen.add(dep)
+            unique.append(dep)
+
+    print('\n'.join(unique))
+
+
+if __name__ == '__main__':
+    main()

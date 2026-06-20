@@ -47,8 +47,13 @@ inputs:
   stage:
     description: All stages listed at https://doc.wikimedia.org/quibble/usage.html#stages. `phan` and `coverage` also supported.
     default: all
-  exclude-known-failures:
-    default: true
+  dependencies:
+    description: |
+      Whitespace/comma separated list of dependency extensions or skins, e.g.
+      `Foo Bar` or `extensions/Foo skins/Bar`. When set, this takes priority
+      over the dependencies inferred from the extension.json/skin.json
+      `requires` clause and from the phan config (.phan/config.php).
+    default: ""
   exclude-dependencies:
     default: ""
   cache-key:
@@ -77,7 +82,6 @@ runs:
     # $RUNNER_TEMP/src/                                 Mediawiki installation
     # $RUNNER_TEMP/src/<TYPE>s/<EXTENSION_NAME>/        Clone of the extension repository
     # $RUNNER_TEMP/docker-images/                       Docker images which exported with docker-save command
-    # <path>/.github/workflows/dependencies            Dependency extensions and skins
     - id: setup
       shell: bash
       env:
@@ -153,40 +157,21 @@ runs:
     - id: deps
       shell: bash
       env:
-        EXCLUDE_KNOWN_FAILURES: ${{ inputs.exclude-known-failures }}
-        MEDIAWIKI_VERSION: ${{ inputs.mediawiki-version }}
+        DEPENDENCIES_INPUT: ${{ inputs.dependencies }}
         EXCLUDE_DEPENDENCIES: ${{ inputs.exclude-dependencies }}
         PROJECT_PATH: ${{ inputs.project-path }}
+        ACTION_PATH: ${{ github.action_path }}
       run: |
-        # Resolve dependencies
+        # Resolve dependencies from the first source that yields anything: the
+        # dependencies input, then the requires clause of extension.json/skin.json,
+        # then the phan config (.phan/config.php).
         cd "$PROJECT_PATH"
-        if [ -e .github/workflows/dependencies ]; then
-          cd .github/workflows
-          curl -sLO https://raw.githubusercontent.com/wikimedia/integration-config/master/zuul/dependencies.yaml
-          curl -sLO https://raw.githubusercontent.com/wikimedia/integration-config/master/zuul/phan_dependencies.yaml
-          curl -sLO https://raw.githubusercontent.com/wikimedia/integration-config/master/zuul/parameter_functions.py
-          curl -sLO https://raw.githubusercontent.com/lens0021/quibble-action/refs/heads/main/resolve_dependencies.py
-          DEPENDENCIES="$(python3 resolve_dependencies.py dependencies)"
-          if [ "${EXCLUDE_KNOWN_FAILURES}" == 'true' ]; then
-            if [ "${MEDIAWIKI_VERSION}" == 'master' ]; then
-              EXCLUDES=(
-                # "GrowthExperiments"
-              )
-            elif [ "${MEDIAWIKI_VERSION}" == 'REL1_43' ]; then
-              EXCLUDES=(
-                # "GrowthExperiments"
-              )
-            fi
-            for dep in "${EXCLUDES[@]}"; do
-              DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /${dep}$)"
-            done
-          fi
-          for dep in ${EXCLUDE_DEPENDENCIES}; do
-            DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /${dep}$)"
-          done
-          DEPENDENCIES="$(echo $DEPENDENCIES | tr '\n' ' ')"
-          echo "dependencies=${DEPENDENCIES}" >> "$GITHUB_OUTPUT"
-        fi
+        DEPENDENCIES="$(python3 "$ACTION_PATH/resolve_dependencies.py" "$DEPENDENCIES_INPUT")"
+        for dep in ${EXCLUDE_DEPENDENCIES}; do
+          DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /${dep}$)"
+        done
+        DEPENDENCIES="$(echo $DEPENDENCIES | tr '\n' ' ')"
+        echo "dependencies=${DEPENDENCIES}" >> "$GITHUB_OUTPUT"
 
     - name: Cache quibble docker image
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
@@ -259,7 +244,7 @@ runs:
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: ${{ steps.setup.outputs.dir }}/src
-        key: ${{ runner.os }}-${{ inputs.mediawiki-version }}-${{ hashFiles(format('{0}/.github/workflows/dependencies', inputs.project-path)) }}-${{ inputs.exclude-dependencies }}-${{ inputs.cache-key }}
+        key: ${{ runner.os }}-${{ inputs.mediawiki-version }}-${{ hashFiles(format('{0}/extension.json', inputs.project-path), format('{0}/skin.json', inputs.project-path), format('{0}/.phan/config.php', inputs.project-path)) }}-${{ inputs.dependencies }}-${{ inputs.exclude-dependencies }}-${{ inputs.cache-key }}
 
     - shell: bash
       env:
