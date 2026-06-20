@@ -369,7 +369,7 @@ runs:
         sudo chown -R nobody:nogroup src cache
         sudo chown $(id -u):$(id -g) src cache
 
-    - if: inputs.stage == 'phan' || inputs.stage == 'coverage'
+    - if: inputs.stage == 'phan'
       shell: bash
       working-directory: ${{ steps.setup.outputs.dir }}
       env:
@@ -423,6 +423,7 @@ runs:
         DOCKER_ORG: ${{ inputs.docker-org }}
         COVERAGE_DOCKER_IMAGE: ${{ steps.tags.outputs.coverage_image }}
         COVERAGE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.coverage }}
+        DEPENDENCIES: ${{ steps.deps.outputs.dependencies }}
       run: |
         # Coverage
         # MediaWiki's coverage helper (tests/phpunit/generatePHPUnitConfig.php,
@@ -436,6 +437,10 @@ runs:
           else
             COMMAND=mwext-phpunit-coverage
           fi
+          # Install dependencies inside the coverage image itself (no --skip-deps),
+          # so they resolve against that image's PHP. Resolving them in the separate
+          # quibble image, whose PHP can differ, pulls in packages the coverage image
+          # cannot run (e.g. Symfony 8 needs PHP 8.4 while quibble-coverage is 8.3).
           docker run \
             --entrypoint quibble-with-supervisord \
             -e "ZUUL_PROJECT=mediawiki/${TYPE}s/${EXTENSION_NAME}" \
@@ -445,8 +450,9 @@ runs:
             -v "$(pwd)"/log:/workspace/log \
             "${DOCKER_REGISTRY}/${DOCKER_ORG}/${COVERAGE_DOCKER_IMAGE}:${COVERAGE_DOCKER_LATEST_TAG}" \
             --skip-zuul \
-            --skip-deps \
-            -c "${COMMAND}"
+            --packages-source composer \
+            -c "${COMMAND}" \
+            $DEPENDENCIES
         fi
 
     - if: inputs.stage != 'phan' && inputs.stage != 'coverage'

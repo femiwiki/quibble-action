@@ -50,8 +50,7 @@ jobs:
           stage: coverage
           mediawiki-version: master
           project-path: project
-      # The coverage stage was pinned to the discontinued php74 image and so could
-      # never run; this asserts it now produces a report with quibble-coverage.
+      # Assert the coverage stage produced a report (the cover dir is non-empty).
       - name: Assert a coverage report was produced
         env:
           COVER_DIR: ${{ steps.quibble.outputs.coverage }}
