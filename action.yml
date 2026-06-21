@@ -7,8 +7,11 @@ inputs:
   docker-org:
     default: releng
   debian:
-    description: Debian base for the Quibble image.
-    default: bookworm
+    description: >-
+      Debian base for the Quibble image. When empty it is derived from
+      `mediawiki-version`: `buster` for REL1_43/REL1_44 (their Selenium tests
+      need that image's older Chromium), `bookworm` otherwise.
+    default: ""
   quibble-docker-image:
     description: >-
       Override for the Quibble Docker image. When empty, it is derived as
@@ -138,9 +141,22 @@ runs:
           esac
         fi
         echo "php_version=${php_version}" >> "$GITHUB_OUTPUT"
+        # Effective Debian base: an explicit debian input wins; api-testing needs
+        # bookworm (its php8.3 image bundles wikidiff2); otherwise derive it from
+        # the MediaWiki branch. See the README "Docker images" section.
+        if [ -n "${DEBIAN}" ]; then
+          debian="${DEBIAN}"
+        elif [ "${STAGE}" == 'api-testing' ]; then
+          debian='bookworm'
+        else
+          case "${MEDIAWIKI_VERSION}" in
+            REL1_43 | REL1_44) debian='buster' ;;
+            *) debian='bookworm' ;;
+          esac
+        fi
         # Resolve the Docker images from php-version and debian, unless overridden
         php="php${php_version//./}"
-        QUIBBLE_DOCKER_IMAGE="${QUIBBLE_IMAGE_OVERRIDE:-quibble-${DEBIAN}-${php}}"
+        QUIBBLE_DOCKER_IMAGE="${QUIBBLE_IMAGE_OVERRIDE:-quibble-${debian}-${php}}"
         # Coverage uses the single pcov-based quibble-coverage image (not a
         # per-debian/php variant), matching current Wikimedia CI.
         COVERAGE_DOCKER_IMAGE="${COVERAGE_IMAGE_OVERRIDE:-quibble-coverage}"
