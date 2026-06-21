@@ -14,6 +14,7 @@ for. It can also run [Phan] static analysis and PHPUnit code coverage.
 [Quibble]: https://doc.wikimedia.org/quibble/
 [Quibble Docker images]: https://docker-registry.wikimedia.org/
 [Phan]: https://github.com/phan/phan
+[cs2pr]: https://github.com/staabm/annotate-pull-request-from-checkstyle
 
 ## How it works
 
@@ -58,7 +59,13 @@ one of the two extra modes this action adds:
 
 - any stage from the [Quibble stages documentation] (for example `phpunit`,
   `selenium`, `qunit`);
-- `phan` runs [Phan] static analysis instead of Quibble;
+- `phan` runs [Phan] static analysis instead of Quibble, and reports each issue
+  as an inline annotation on the offending line in the pull request. How that
+  is produced depends on the project's phan version: **phan >= 5.5** has a
+  native `--output-mode=github` (used directly, no extra tooling), while
+  **older phan** emits `--output-mode=checkstyle` which is piped through
+  [cs2pr] for the same annotations. The version is detected from the project's
+  `phan/phan` entry, so either way works with no configuration;
 - `coverage` runs PHPUnit code coverage and exposes the report through the
   `coverage` output. It requires `mediawiki-version: master`, because
   MediaWiki's coverage tooling (`tests/phpunit/generatePHPUnitConfig.php`)
