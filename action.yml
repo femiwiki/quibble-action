@@ -506,17 +506,34 @@ runs:
         DEPENDENCIES: ${{ steps.deps.outputs.dependencies }}
       run: |
         # Quibble
+        image="${DOCKER_REGISTRY}/${DOCKER_ORG}/${QUIBBLE_DOCKER_IMAGE}:${QUIBBLE_DOCKER_LATEST_TAG}"
+        status=0
         docker run \
           --entrypoint quibble-with-supervisord \
           -e "ZUUL_PROJECT=mediawiki/${TYPE}s/${EXTENSION_NAME}" \
           -v "$(pwd)"/cache:/cache \
           -v "$(pwd)"/src:/workspace/src \
           -v "$(pwd)"/log:/workspace/log \
-          "${DOCKER_REGISTRY}/${DOCKER_ORG}/${QUIBBLE_DOCKER_IMAGE}:${QUIBBLE_DOCKER_LATEST_TAG}" \
+          "$image" \
           --skip-zuul \
           --packages-source composer \
           --run "${STAGE}" \
-          $DEPENDENCIES
+          $DEPENDENCIES || status=$?
+        # composer-test: surface phpcs findings as inline annotations. phpcs has
+        # no GitHub output mode, so re-run it with a checkstyle report and pipe
+        # that through cs2pr. This runs in the same image (it has PHP and
+        # composer) and reuses the vendor Quibble just installed in the mounted
+        # src, so nothing is reinstalled. cs2pr itself is installed with composer
+        # into an isolated COMPOSER_HOME.
+        if [ "${STAGE}" = 'composer-test' ]; then
+          docker run \
+            --entrypoint bash \
+            -e "PROJECT_DIR=/workspace/src/${TYPE}s/${EXTENSION_NAME}" \
+            -v "$(pwd)"/src:/workspace/src \
+            "$image" \
+            -c 'cd "$PROJECT_DIR" && export COMPOSER_HOME=/tmp/cs2pr-home && composer global require --no-interaction --quiet staabm/annotate-pull-request-from-checkstyle:1.8.7 && vendor/bin/phpcs --report=checkstyle -q | "$(composer global config bin-dir --absolute)/cs2pr"' || true
+        fi
+        exit "$status"
 
     - name: Make Quibble logs readable
       if: always() && inputs.upload-logs == 'true'
