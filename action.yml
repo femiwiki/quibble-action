@@ -439,6 +439,15 @@ runs:
         # Quibble
         image="${DOCKER_REGISTRY}/${DOCKER_ORG}/${QUIBBLE_DOCKER_IMAGE}:${QUIBBLE_DOCKER_LATEST_TAG}"
         status=0
+        # Quibble's selenium stage runs `npm run selenium-test` for every project
+        # that has it, dependencies included. When the project under test has no
+        # selenium-test script there is nothing of ours to run, and only the
+        # dependencies' (often flaky) suites would execute, so skip the stage.
+        if [ "${STAGE}" = 'selenium' ] && \
+          ! jq -e '.scripts["selenium-test"]' "src/${TYPE}s/${EXTENSION_NAME}/package.json" >/dev/null 2>&1; then
+          echo "No selenium-test script in ${EXTENSION_NAME}; skipping selenium (nothing of ours to run)."
+          exit 0
+        fi
         docker run \
           --entrypoint quibble-with-supervisord \
           -e "ZUUL_PROJECT=mediawiki/${TYPE}s/${EXTENSION_NAME}" \
