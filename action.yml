@@ -416,12 +416,38 @@ runs:
         PHAN_DOCKER_IMAGE: ${{ steps.tags.outputs.phan_image }}
         PHAN_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.phan }}
       run: |
-        # Phan
-        docker run \
-          -e "THING_SUBNAME=${TYPE}s/${EXTENSION_NAME}" \
-          -v "$(pwd)"/src:/mediawiki \
-          "${DOCKER_REGISTRY}/${DOCKER_ORG}/${PHAN_DOCKER_IMAGE}:${PHAN_DOCKER_LATEST_TAG}" \
-          --color
+        # Phan, reported as inline PR annotations on the offending lines. phan
+        # >= 5.5 has a native `github` output mode (no extra tooling); older
+        # phan emits checkstyle, which cs2pr converts into the same annotations.
+        # Phan runs with `-d .`, so the paths are relative to the project root
+        # and resolve against the consumer's checkout.
+        image="${DOCKER_REGISTRY}/${DOCKER_ORG}/${PHAN_DOCKER_IMAGE}:${PHAN_DOCKER_LATEST_TAG}"
+        installed="src/${TYPE}s/${EXTENSION_NAME}/vendor/composer/installed.json"
+        phan_version="$(jq -r '(.packages // .)[] | select(.name == "phan/phan") | .version | ltrimstr("v")' "$installed" 2>/dev/null || true)"
+        if [ -n "$phan_version" ] && printf '%s\n5.5.0\n' "$phan_version" | sort -V | head -n1 | grep -qx '5.5.0'; then
+          # phan >= 5.5: native GitHub annotations.
+          docker run \
+            -e "THING_SUBNAME=${TYPE}s/${EXTENSION_NAME}" \
+            -v "$(pwd)"/src:/mediawiki \
+            "$image" \
+            --output-mode github
+        else
+          # phan < 5.5 (or undetected): annotate the checkstyle report with
+          # cs2pr, installed via composer (its documented distribution) into an
+          # isolated COMPOSER_HOME so it cannot clash with anything else on the
+          # runner.
+          status=0
+          docker run \
+            -e "THING_SUBNAME=${TYPE}s/${EXTENSION_NAME}" \
+            -v "$(pwd)"/src:/mediawiki \
+            "$image" \
+            --output-mode checkstyle > phan-checkstyle.xml || status=$?
+          export COMPOSER_HOME="$(pwd)/.cs2pr-composer"
+          composer global require --no-interaction --quiet \
+            staabm/annotate-pull-request-from-checkstyle:1.8.7
+          "$(composer global config bin-dir --absolute)/cs2pr" phan-checkstyle.xml || true
+          exit "$status"
+        fi
 
     - if: inputs.stage == 'coverage'
       shell: bash
