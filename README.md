@@ -168,6 +168,12 @@ the wikidiff2 PHP extension, and the only published Quibble image that bundles
 it is `quibble-bookworm-php83`. Setting `php-version` (or `quibble-docker-image`)
 explicitly overrides all of this.
 
+The `debian` base is derived from `mediawiki-version` the same way: `buster`
+for REL1_43/REL1_44 (their Selenium tests need that image's older Chromium,
+which newer Chromium aborts on for those branches' test URLs) and `bookworm`
+otherwise; `api-testing` always uses `bookworm`. Set `debian` explicitly to
+override.
+
 Available bases and versions are whatever the
 [Wikimedia Docker registry](https://docker-registry.wikimedia.org/) publishes,
 so not every `debian` / `php-version` combination exists. For example, to pin an
@@ -194,7 +200,7 @@ older PHP, such as when testing an older MediaWiki branch:
 | `log-artifact-name` | `quibble-logs` | Name for the uploaded Quibble logs artifact. |
 | `docker-registry` | `docker-registry.wikimedia.org` | Registry that hosts the images. |
 | `docker-org` | `releng` | Registry organization. |
-| `debian` | `bookworm` | Debian base for the Quibble image. |
+| `debian` | derived from `mediawiki-version` | Debian base for the Quibble image (`buster` for REL1_43/REL1_44, else `bookworm`). See [Docker images](#docker-images). |
 | `php-version` | derived from `mediawiki-version` (`8.3` for `api-testing`) | PHP version. Selects the `php<version>` part of every image, and the host PHP for the `phan` stage. See [Docker images](#docker-images). |
 | `quibble-docker-image` | (derived) | Override; `quibble-<debian>-php<version>` when empty. |
 | `coverage-docker-image` | `quibble-coverage` | Override for the single pcov-based coverage image. |
