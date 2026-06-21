@@ -7,10 +7,7 @@ inputs:
   docker-org:
     default: releng
   debian:
-    description: >-
-      Debian base for the Quibble image. When empty it is derived from
-      `mediawiki-version`: `buster` for REL1_43/REL1_44 (their Selenium tests
-      need that image's older Chromium), `bookworm` otherwise.
+    description: Debian base for the Quibble image. Derived from the stage and MediaWiki branch when empty; see the README "Docker images" section.
     default: ""
   quibble-docker-image:
     description: >-
@@ -24,20 +21,10 @@ inputs:
       replaced the old per-PHP `quibble-<debian>-php<version>-coverage` images).
     default: quibble-coverage
   phan-docker-image:
-    description: >-
-      Override for the phan Docker image. When empty, it is derived from
-      `php-version` as `mediawiki-phan-php<version>`.
+    description: Override for the image the `phan` stage runs in. Defaults to the Quibble image; see the README "Docker images" section.
     default: ""
   php-version:
-    description: >-
-      PHP version. Selects the `php<version>` part of the Quibble and phan
-      images, and sets up this PHP on the host for the `phan` stage's
-      `composer install`. Available versions depend on the images published in
-      the Wikimedia Docker registry (https://docker-registry.wikimedia.org/).
-      When empty it is derived from `mediawiki-version` to match that branch's
-      minimum PHP (see the README's "Docker images" section); the `api-testing`
-      stage always uses `8.3` (the only image bundling the wikidiff2 extension
-      it requires).
+    description: PHP version for the images and the host. Derived from the stage and MediaWiki branch when empty; see the README "Docker images" section.
     default: ""
 
   project-path:
@@ -124,13 +111,17 @@ runs:
         PHAN_IMAGE_OVERRIDE: ${{ inputs.phan-docker-image }}
         STAGE: ${{ inputs.stage }}
       run: |
-        # Effective PHP version: an explicit php-version wins; api-testing needs
-        # 8.3 (wikidiff2); otherwise derive it from the MediaWiki branch. See the
-        # README "Docker images" section for the table and rationale.
         if [ -n "${PHP_VERSION}" ]; then
           php_version="${PHP_VERSION}"
         elif [ "${STAGE}" == 'api-testing' ]; then
           php_version='8.3'
+        elif [ "${STAGE}" == 'phan' ]; then
+          case "${MEDIAWIKI_VERSION}" in
+            REL1_43 | REL1_44) php_version='8.3' ;;
+            REL1_45 | REL1_46) php_version='8.4' ;;
+            master) php_version='8.4' ;;
+            *) php_version='8.4' ;;
+          esac
         else
           case "${MEDIAWIKI_VERSION}" in
             REL1_43 | REL1_44) php_version='8.1' ;;
@@ -141,12 +132,9 @@ runs:
           esac
         fi
         echo "php_version=${php_version}" >> "$GITHUB_OUTPUT"
-        # Effective Debian base: an explicit debian input wins; api-testing needs
-        # bookworm (its php8.3 image bundles wikidiff2); otherwise derive it from
-        # the MediaWiki branch. See the README "Docker images" section.
         if [ -n "${DEBIAN}" ]; then
           debian="${DEBIAN}"
-        elif [ "${STAGE}" == 'api-testing' ]; then
+        elif [ "${STAGE}" == 'api-testing' ] || [ "${STAGE}" == 'phan' ]; then
           debian='bookworm'
         else
           case "${MEDIAWIKI_VERSION}" in
@@ -154,18 +142,13 @@ runs:
             *) debian='bookworm' ;;
           esac
         fi
-        # Resolve the Docker images from php-version and debian, unless overridden
         php="php${php_version//./}"
         QUIBBLE_DOCKER_IMAGE="${QUIBBLE_IMAGE_OVERRIDE:-quibble-${debian}-${php}}"
-        # Coverage uses the single pcov-based quibble-coverage image (not a
-        # per-debian/php variant), matching current Wikimedia CI.
         COVERAGE_DOCKER_IMAGE="${COVERAGE_IMAGE_OVERRIDE:-quibble-coverage}"
-        PHAN_DOCKER_IMAGE="${PHAN_IMAGE_OVERRIDE:-mediawiki-phan-${php}}"
+        PHAN_DOCKER_IMAGE="${PHAN_IMAGE_OVERRIDE:-${QUIBBLE_DOCKER_IMAGE}}"
         echo "quibble_image=${QUIBBLE_DOCKER_IMAGE}" >> "$GITHUB_OUTPUT"
         echo "coverage_image=${COVERAGE_DOCKER_IMAGE}" >> "$GITHUB_OUTPUT"
         echo "phan_image=${PHAN_DOCKER_IMAGE}" >> "$GITHUB_OUTPUT"
-        # Get the latest docker tag
-        # Ref: https://github.com/thcipriani/dockerregistry
         QUIBBLE_DOCKER_LATEST_TAG="$(curl -sL "https://${DOCKER_REGISTRY}/v2/${DOCKER_ORG}/${QUIBBLE_DOCKER_IMAGE}/tags/list" |
           python3 -c 'import json;print("\n".join(json.loads(input())["tags"]))' |
           grep -v latest | sort -Vr | head -1)"
@@ -227,13 +210,6 @@ runs:
         path: ${{ steps.setup.outputs.dir }}/docker-images/${{ steps.tags.outputs.coverage_image }}
         key: ${{ steps.tags.outputs.coverage_image }}:${{ steps.tags.outputs.coverage }}-${{ inputs.cache-key }}
 
-    - name: Cache phan docker image
-      if: inputs.stage == 'phan'
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-      with:
-        path: ${{ steps.setup.outputs.dir }}/docker-images/${{ steps.tags.outputs.phan_image }}
-        key: ${{ steps.tags.outputs.phan_image }}:${{ steps.tags.outputs.phan }}-${{ inputs.cache-key }}
-
     - if: inputs.stage == 'coverage'
       shell: bash
       env:
@@ -248,22 +224,6 @@ runs:
           docker load -i "${BASE_DIR}"/docker-images/"${COVERAGE_DOCKER_IMAGE}"
         else
           docker pull "${DOCKER_REGISTRY}/${DOCKER_ORG}/${COVERAGE_DOCKER_IMAGE}:${COVERAGE_DOCKER_LATEST_TAG}"
-        fi
-
-    - if: inputs.stage == 'phan'
-      shell: bash
-      env:
-        BASE_DIR: ${{ steps.setup.outputs.dir }}
-        PHAN_DOCKER_IMAGE: ${{ steps.tags.outputs.phan_image }}
-        DOCKER_REGISTRY: ${{ inputs.docker-registry }}
-        DOCKER_ORG: ${{ inputs.docker-org }}
-        PHAN_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.phan }}
-      run: |
-        # Load or pull phan docker image
-        if [ -f "${BASE_DIR}"/docker-images/"${PHAN_DOCKER_IMAGE}" ]; then
-          docker load -i "${BASE_DIR}"/docker-images/"${PHAN_DOCKER_IMAGE}"
-        else
-          docker pull "${DOCKER_REGISTRY}/${DOCKER_ORG}/${PHAN_DOCKER_IMAGE}:${PHAN_DOCKER_LATEST_TAG}"
         fi
 
     - name: Cache MediaWiki installation
@@ -416,32 +376,24 @@ runs:
         PHAN_DOCKER_IMAGE: ${{ steps.tags.outputs.phan_image }}
         PHAN_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.phan }}
       run: |
-        # Phan, reported as inline PR annotations on the offending lines. phan
-        # >= 5.5 has a native `github` output mode (no extra tooling); older
-        # phan emits checkstyle, which cs2pr converts into the same annotations.
-        # Phan runs with `-d .`, so the paths are relative to the project root
-        # and resolve against the consumer's checkout.
         image="${DOCKER_REGISTRY}/${DOCKER_ORG}/${PHAN_DOCKER_IMAGE}:${PHAN_DOCKER_LATEST_TAG}"
+        docker image inspect "$image" >/dev/null 2>&1 || docker pull "$image"
+        project="/workspace/src/${TYPE}s/${EXTENSION_NAME}"
         installed="src/${TYPE}s/${EXTENSION_NAME}/vendor/composer/installed.json"
         phan_version="$(jq -r '(.packages // .)[] | select(.name == "phan/phan") | .version | ltrimstr("v")' "$installed" 2>/dev/null || true)"
+        run_phan() {
+          docker run \
+            -e HOME=/tmp \
+            -v "$(pwd)"/src:/workspace/src \
+            --entrypoint bash \
+            "$image" \
+            -c "cd '$project' && vendor/bin/phan -d . --long-progress-bar --require-config-exists $1"
+        }
         if [ -n "$phan_version" ] && printf '%s\n5.5.0\n' "$phan_version" | sort -V | head -n1 | grep -qx '5.5.0'; then
-          # phan >= 5.5: native GitHub annotations.
-          docker run \
-            -e "THING_SUBNAME=${TYPE}s/${EXTENSION_NAME}" \
-            -v "$(pwd)"/src:/mediawiki \
-            "$image" \
-            --output-mode github
+          run_phan "--output-mode github"
         else
-          # phan < 5.5 (or undetected): annotate the checkstyle report with
-          # cs2pr, installed via composer (its documented distribution) into an
-          # isolated COMPOSER_HOME so it cannot clash with anything else on the
-          # runner.
           status=0
-          docker run \
-            -e "THING_SUBNAME=${TYPE}s/${EXTENSION_NAME}" \
-            -v "$(pwd)"/src:/mediawiki \
-            "$image" \
-            --output-mode checkstyle > phan-checkstyle.xml || status=$?
+          run_phan "--output-mode checkstyle" > phan-checkstyle.xml || status=$?
           export COMPOSER_HOME="$(pwd)/.cs2pr-composer"
           composer global require --no-interaction --quiet \
             staabm/annotate-pull-request-from-checkstyle:1.8.7
@@ -563,10 +515,8 @@ runs:
         DOCKER_REGISTRY: ${{ inputs.docker-registry }}
         DOCKER_ORG: ${{ inputs.docker-org }}
         QUIBBLE_DOCKER_IMAGE: ${{ steps.tags.outputs.quibble_image }}
-        PHAN_DOCKER_IMAGE: ${{ steps.tags.outputs.phan_image }}
         COVERAGE_DOCKER_IMAGE: ${{ steps.tags.outputs.coverage_image }}
         QUIBBLE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.quibble }}
-        PHAN_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.phan }}
         COVERAGE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.coverage }}
         BASE_DIR: ${{ steps.setup.outputs.dir }}
       run: |
@@ -580,11 +530,7 @@ runs:
         rm "$(pwd)/docker-images/${QUIBBLE_DOCKER_IMAGE}" || true
         docker save -o "$(pwd)/docker-images/${QUIBBLE_DOCKER_IMAGE}" \
           "${DOCKER_REGISTRY}/${DOCKER_ORG}/${QUIBBLE_DOCKER_IMAGE}:${QUIBBLE_DOCKER_LATEST_TAG}"
-        if [ -n "$PHAN_DOCKER_LATEST_TAG" ]; then
-          rm "$(pwd)/docker-images/${PHAN_DOCKER_IMAGE}" || true
-          docker save -o "$(pwd)/docker-images/${PHAN_DOCKER_IMAGE}" \
-            "${DOCKER_REGISTRY}/${DOCKER_ORG}/${PHAN_DOCKER_IMAGE}:${PHAN_DOCKER_LATEST_TAG}"
-        elif [ -n "$COVERAGE_DOCKER_LATEST_TAG" ]; then
+        if [ -n "$COVERAGE_DOCKER_LATEST_TAG" ]; then
           rm "$(pwd)/docker-images/${COVERAGE_DOCKER_IMAGE}" || true
           docker save -o "$(pwd)/docker-images/${COVERAGE_DOCKER_IMAGE}" \
             "${DOCKER_REGISTRY}/${DOCKER_ORG}/${COVERAGE_DOCKER_IMAGE}:${COVERAGE_DOCKER_LATEST_TAG}"

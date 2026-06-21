@@ -158,28 +158,46 @@ those two knobs. Any image can also be pinned explicitly with its
 | --- | --- | --- |
 | Quibble (`all` and individual stages) | `quibble-<debian>-php<version>` | `quibble-docker-image` |
 | `coverage` | `quibble-coverage` | `coverage-docker-image` |
-| `phan` | `mediawiki-phan-php<version>` | `phan-docker-image` |
+| `phan` | `quibble-bookworm-php<version>` | `phan-docker-image` |
 
-For example, `debian: buster` with `php-version: '8.1'` derives
-`quibble-buster-php81` and `mediawiki-phan-php81`. Coverage is not derived from
-`debian`/`php-version`: it uses the single `quibble-coverage` image (pcov-based,
-the one Wikimedia CI uses), which replaced the old per-PHP coverage images.
+`coverage` is not derived from `debian`/`php-version`: it uses the single
+`quibble-coverage` image (pcov-based, the one Wikimedia CI uses), which replaced
+the old per-PHP coverage images.
 
-When `php-version` is empty it is derived from `mediawiki-version`, matching
-each MediaWiki branch's minimum PHP: `8.1` for REL1_43/REL1_44, `8.2` for
-REL1_45, `8.3` for REL1_46 and master, and `8.4` for anything else. MediaWiki
-releases only once or twice a year, so this table is cheap to keep current; a
-branch not listed falls back to `8.4`, so set `php-version` explicitly when
-testing older branches. The `api-testing` stage always uses `8.3`: it requires
-the wikidiff2 PHP extension, and the only published Quibble image that bundles
-it is `quibble-bookworm-php83`. Setting `php-version` (or `quibble-docker-image`)
-explicitly overrides all of this.
+**`phan` runs in the Quibble image, not a phan-specific one.** Wikimedia stopped
+rebuilding the standalone `mediawiki-phan-php<version>` images in 2025-07; they
+are frozen at php-ast 1.1.2 and cannot run phan >= 6 (current
+`mediawiki-phan-config`), which needs php-ast 1.1.3+. The Quibble images are
+rebuilt continuously and ship a current php-ast, so phan now runs there
+(`--entrypoint bash … vendor/bin/phan`). phan does no browser work, so it always
+uses the `bookworm` base.
 
-The `debian` base is derived from `mediawiki-version` the same way: `buster`
-for REL1_43/REL1_44 (their Selenium tests need that image's older Chromium,
-which newer Chromium aborts on for those branches' test URLs) and `bookworm`
-otherwise; `api-testing` always uses `bookworm`. Set `debian` explicitly to
-override.
+### PHP version
+
+When `php-version` is empty it is derived from `mediawiki-version`, with two
+policies:
+
+- **Most stages** use each branch's **minimum** PHP, to test the floor: `8.1`
+  for REL1_43/REL1_44, `8.2` for REL1_45, `8.3` for REL1_46 and master, `8.4`
+  otherwise.
+- **`phan`** uses the **newest non-EOL** PHP each branch supports: `8.3` for
+  REL1_43/REL1_44, `8.4` for REL1_45/REL1_46 and master, `8.4` otherwise. phan
+  >= 6 needs PHP 8.2+, and newer PHP keeps us on the maintained images; phan is
+  static analysis, so a branch's runtime PHP support does not constrain it. If a
+  still-supported MediaWiki branch supported only EOL PHP, phan would fall back
+  to the newest of those.
+- **`api-testing`** always uses `8.3`: it needs the wikidiff2 PHP extension, and
+  the only published image bundling it is `quibble-bookworm-php83`.
+
+MediaWiki releases only once or twice a year, so these tables are cheap to keep
+current; a branch not listed falls back to `8.4`. Set `php-version` explicitly
+to override.
+
+The `debian` base is also derived from `mediawiki-version`: `buster` for
+REL1_43/REL1_44 (their Selenium tests need that image's older Chromium, which
+newer Chromium aborts on for those branches' test URLs) and `bookworm`
+otherwise. The `phan` and `api-testing` stages always use `bookworm`. Set
+`debian` explicitly to override.
 
 Available bases and versions are whatever the
 [Wikimedia Docker registry](https://docker-registry.wikimedia.org/) publishes,
@@ -207,11 +225,11 @@ older PHP, such as when testing an older MediaWiki branch:
 | `log-artifact-name` | `quibble-logs` | Name for the uploaded Quibble logs artifact. |
 | `docker-registry` | `docker-registry.wikimedia.org` | Registry that hosts the images. |
 | `docker-org` | `releng` | Registry organization. |
-| `debian` | derived from `mediawiki-version` | Debian base for the Quibble image (`buster` for REL1_43/REL1_44, else `bookworm`). See [Docker images](#docker-images). |
-| `php-version` | derived from `mediawiki-version` (`8.3` for `api-testing`) | PHP version. Selects the `php<version>` part of every image, and the host PHP for the `phan` stage. See [Docker images](#docker-images). |
+| `debian` | derived | Debian base for the Quibble image (`bookworm`, or `buster` for REL1_43/REL1_44 non-phan stages). See [Docker images](#docker-images). |
+| `php-version` | derived | PHP version for the images and the host. Branch minimum for most stages, newest non-EOL for `phan`. See [Docker images](#docker-images). |
 | `quibble-docker-image` | (derived) | Override; `quibble-<debian>-php<version>` when empty. |
 | `coverage-docker-image` | `quibble-coverage` | Override for the single pcov-based coverage image. |
-| `phan-docker-image` | (derived) | Override; `mediawiki-phan-php<version>` when empty. |
+| `phan-docker-image` | (derived) | Override for the `phan` image; the Quibble image (`quibble-bookworm-php<version>`) when empty. |
 
 ## Outputs
 
