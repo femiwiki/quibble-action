@@ -158,19 +158,20 @@ those two knobs. Any image can also be pinned explicitly with its
 | --- | --- | --- |
 | Quibble (`all` and individual stages) | `quibble-<debian>-php<version>` | `quibble-docker-image` |
 | `coverage` | `quibble-coverage` | `coverage-docker-image` |
-| `phan` | `quibble-bookworm-php<version>` | `phan-docker-image` |
+| `phan` | `mediawiki-phan-testrun` | `phan-docker-image` |
 
 `coverage` is not derived from `debian`/`php-version`: it uses the single
 `quibble-coverage` image (pcov-based, the one Wikimedia CI uses), which replaced
 the old per-PHP coverage images.
 
-**`phan` runs in the Quibble image, not a phan-specific one.** Wikimedia stopped
-rebuilding the standalone `mediawiki-phan-php<version>` images in 2025-07; they
-are frozen at php-ast 1.1.2 and cannot run phan >= 6 (current
-`mediawiki-phan-config`), which needs php-ast 1.1.3+. The Quibble images are
-rebuilt continuously and ship a current php-ast, so phan now runs there
-(`--entrypoint bash … vendor/bin/phan`). phan does no browser work, so it always
-uses the `bookworm` base.
+**`phan` runs in `mediawiki-phan-testrun`, the image Wikimedia CI runs phan in.**
+The old standalone `mediawiki-phan-php<version>` images were frozen at php-ast
+1.1.2 in 2025-07 and cannot run phan >= 6 (current `mediawiki-phan-config`),
+which needs php-ast 1.1.3+; `mediawiki-phan-testrun` is rebuilt and ships a
+current php-ast. It is a single image (no `php<version>` variants), so
+`php-version` and `debian` do not affect it. The project's phan dependencies are
+installed in the Quibble image first, then phan runs over them in
+`mediawiki-phan-testrun` (`--entrypoint bash … vendor/bin/phan`).
 
 ### PHP version
 
@@ -181,11 +182,12 @@ policies:
   for REL1_43/REL1_44, `8.2` for REL1_45, `8.3` for REL1_46 and master, `8.4`
   otherwise.
 - **`phan`** uses the **newest non-EOL** PHP each branch supports: `8.3` for
-  REL1_43/REL1_44, `8.4` for REL1_45/REL1_46 and master, `8.4` otherwise. phan
-  >= 6 needs PHP 8.2+, and newer PHP keeps us on the maintained images; phan is
-  static analysis, so a branch's runtime PHP support does not constrain it. If a
-  still-supported MediaWiki branch supported only EOL PHP, phan would fall back
-  to the newest of those.
+  REL1_43/REL1_44, `8.4` for REL1_45/REL1_46 and master, `8.4` otherwise. This
+  selects the Quibble image that installs phan's dependencies (phan itself runs
+  in `mediawiki-phan-testrun`); phan >= 6 needs PHP 8.2+, so the branch minimum
+  would be too old to resolve it. phan is static analysis, so a branch's runtime
+  PHP support does not constrain it. If a still-supported MediaWiki branch
+  supported only EOL PHP, phan would fall back to the newest of those.
 - **`api-testing`** always uses `8.3`: it needs the wikidiff2 PHP extension, and
   the only published image bundling it is `quibble-bookworm-php83`.
 
@@ -229,7 +231,7 @@ older PHP, such as when testing an older MediaWiki branch:
 | `php-version` | derived | PHP version for the images and the host. Branch minimum for most stages, newest non-EOL for `phan`. See [Docker images](#docker-images). |
 | `quibble-docker-image` | (derived) | Override; `quibble-<debian>-php<version>` when empty. |
 | `coverage-docker-image` | `quibble-coverage` | Override for the single pcov-based coverage image. |
-| `phan-docker-image` | (derived) | Override for the `phan` image; the Quibble image (`quibble-bookworm-php<version>`) when empty. |
+| `phan-docker-image` | `mediawiki-phan-testrun` | Override for the `phan` run image; `mediawiki-phan-testrun` when empty. |
 
 ## Outputs
 

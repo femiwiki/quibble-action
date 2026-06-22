@@ -21,7 +21,7 @@ inputs:
       replaced the old per-PHP `quibble-<debian>-php<version>-coverage` images).
     default: quibble-coverage
   phan-docker-image:
-    description: Override for the image the `phan` stage runs in. Defaults to the Quibble image; see the README "Docker images" section.
+    description: Override for the image the `phan` stage runs in. Defaults to `mediawiki-phan-testrun`; see the README "Docker images" section.
     default: ""
   php-version:
     description: PHP version for the images and the host. Derived from the stage and MediaWiki branch when empty; see the README "Docker images" section.
@@ -145,7 +145,7 @@ runs:
         php="php${php_version//./}"
         QUIBBLE_DOCKER_IMAGE="${QUIBBLE_IMAGE_OVERRIDE:-quibble-${debian}-${php}}"
         COVERAGE_DOCKER_IMAGE="${COVERAGE_IMAGE_OVERRIDE:-quibble-coverage}"
-        PHAN_DOCKER_IMAGE="${PHAN_IMAGE_OVERRIDE:-${QUIBBLE_DOCKER_IMAGE}}"
+        PHAN_DOCKER_IMAGE="${PHAN_IMAGE_OVERRIDE:-mediawiki-phan-testrun}"
         echo "quibble_image=${QUIBBLE_DOCKER_IMAGE}" >> "$GITHUB_OUTPUT"
         echo "coverage_image=${COVERAGE_DOCKER_IMAGE}" >> "$GITHUB_OUTPUT"
         echo "phan_image=${PHAN_DOCKER_IMAGE}" >> "$GITHUB_OUTPUT"
