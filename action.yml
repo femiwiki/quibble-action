@@ -115,13 +115,6 @@ runs:
           php_version="${PHP_VERSION}"
         elif [ "${STAGE}" == 'api-testing' ]; then
           php_version='8.3'
-        elif [ "${STAGE}" == 'phan' ]; then
-          case "${MEDIAWIKI_VERSION}" in
-            REL1_43 | REL1_44) php_version='8.3' ;;
-            REL1_45 | REL1_46) php_version='8.4' ;;
-            master) php_version='8.4' ;;
-            *) php_version='8.4' ;;
-          esac
         else
           case "${MEDIAWIKI_VERSION}" in
             REL1_43 | REL1_44) php_version='8.1' ;;

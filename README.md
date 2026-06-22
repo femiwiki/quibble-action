@@ -178,16 +178,12 @@ installed in the Quibble image first, then phan runs over them in
 When `php-version` is empty it is derived from `mediawiki-version`, with two
 policies:
 
-- **Most stages** use each branch's **minimum** PHP, to test the floor: `8.1`
-  for REL1_43/REL1_44, `8.2` for REL1_45, `8.3` for REL1_46 and master, `8.4`
-  otherwise.
-- **`phan`** uses the **newest non-EOL** PHP each branch supports: `8.3` for
-  REL1_43/REL1_44, `8.4` for REL1_45/REL1_46 and master, `8.4` otherwise. This
-  selects the Quibble image that installs phan's dependencies (phan itself runs
-  in `mediawiki-phan-testrun`); phan >= 6 needs PHP 8.2+, so the branch minimum
-  would be too old to resolve it. phan is static analysis, so a branch's runtime
-  PHP support does not constrain it. If a still-supported MediaWiki branch
-  supported only EOL PHP, phan would fall back to the newest of those.
+- **Most stages**, including `phan`, use each branch's **minimum** PHP, to test
+  the floor: `8.1` for REL1_43/REL1_44, `8.2` for REL1_45, `8.3` for REL1_46 and
+  master, `8.4` otherwise. For `phan` this only selects the Quibble image that
+  installs its dependencies (phan itself runs in `mediawiki-phan-testrun`); the
+  minimum already clears phan's floor (phan 6 needs PHP 8.1+, phan 5 less), so it
+  needs no higher version of its own.
 - **`api-testing`** always uses `8.3`: it needs the wikidiff2 PHP extension, and
   the only published image bundling it is `quibble-bookworm-php83`.
 
@@ -228,7 +224,7 @@ older PHP, such as when testing an older MediaWiki branch:
 | `docker-registry` | `docker-registry.wikimedia.org` | Registry that hosts the images. |
 | `docker-org` | `releng` | Registry organization. |
 | `debian` | derived | Debian base for the Quibble image (`bookworm`, or `buster` for REL1_43/REL1_44 non-phan stages). See [Docker images](#docker-images). |
-| `php-version` | derived | PHP version for the images and the host. Branch minimum for most stages, newest non-EOL for `phan`. See [Docker images](#docker-images). |
+| `php-version` | derived | PHP version for the images and the host. Branch minimum (for `phan`, the image that installs its deps; phan runs in `mediawiki-phan-testrun`). See [Docker images](#docker-images). |
 | `quibble-docker-image` | (derived) | Override; `quibble-<debian>-php<version>` when empty. |
 | `coverage-docker-image` | `quibble-coverage` | Override for the single pcov-based coverage image. |
 | `phan-docker-image` | `mediawiki-phan-testrun` | Override for the `phan` run image; `mediawiki-phan-testrun` when empty. |
