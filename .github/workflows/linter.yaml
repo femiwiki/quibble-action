@@ -53,4 +53,4 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-      - uses: rvben/rumdl@17b45bb50756376383f57f7d5bcf794617c9d577 # v0.2.18
+      - uses: rvben/rumdl@a28a5738b9e987dcfa354eabfec92c75feca7783 # v0.2.22
