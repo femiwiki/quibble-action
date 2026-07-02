@@ -231,14 +231,17 @@ runs:
         MEDIAWIKI_VERSION: ${{ inputs.mediawiki-version }}
         DEPENDENCIES: ${{ steps.deps.outputs.dependencies }}
       run: |
-        # Download MediaWiki and extensions
+        # Download MediaWiki and extensions. Cloned from the official GitHub
+        # mirrors (github.com/wikimedia/*, same refs as Gerrit): Gerrit
+        # rate-limits the shared Actions runner IPs (HTTP 429), which made
+        # these clones fail intermittently.
         cd "$BASE_DIR"
         if [ ! -d src ]; then
-          git clone -b "${MEDIAWIKI_VERSION}" --depth 1 https://gerrit.wikimedia.org/r/mediawiki/core src
-          git clone --recurse-submodules -b "${MEDIAWIKI_VERSION}" --depth 1 https://gerrit.wikimedia.org/r/mediawiki/skins/Vector src/skins/Vector
+          git clone -b "${MEDIAWIKI_VERSION}" --depth 1 https://github.com/wikimedia/mediawiki src
+          git clone --recurse-submodules -b "${MEDIAWIKI_VERSION}" --depth 1 https://github.com/wikimedia/mediawiki-skins-Vector src/skins/Vector
           for dep in $DEPENDENCIES; do
             if [ "$dep" = 'mediawiki/extensions/Wikibase' ]; then
-              git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "https://gerrit.wikimedia.org/r/${dep}" src/"$(echo $dep | cut -d'/' -f2,3)"
+              git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "https://github.com/wikimedia/$(echo $dep | tr '/' '-')" src/"$(echo $dep | cut -d'/' -f2,3)"
 
               cd src/"$(echo $dep | cut -d'/' -f2,3)"
               # Repoint dead phabricator submodule URLs at their github
@@ -253,7 +256,7 @@ runs:
               git submodule update --init
               cd -
             elif [ "$dep" = 'mediawiki/extensions/WikibaseLexeme' ]; then
-              git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "https://gerrit.wikimedia.org/r/${dep}" src/"$(echo $dep | cut -d'/' -f2,3)"
+              git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "https://github.com/wikimedia/$(echo $dep | tr '/' '-')" src/"$(echo $dep | cut -d'/' -f2,3)"
 
               cd src/"$(echo $dep | cut -d'/' -f2,3)"
               # Repoint the dead phabricator submodule URL at its github
@@ -265,7 +268,7 @@ runs:
               git submodule update --init
               cd -
             else
-              git clone --recurse-submodules -b "${MEDIAWIKI_VERSION}" --depth 1 "https://gerrit.wikimedia.org/r/${dep}" src/"$(echo $dep | cut -d'/' -f2,3)"
+              git clone --recurse-submodules -b "${MEDIAWIKI_VERSION}" --depth 1 "https://github.com/wikimedia/$(echo $dep | tr '/' '-')" src/"$(echo $dep | cut -d'/' -f2,3)"
             fi
           done
         fi
