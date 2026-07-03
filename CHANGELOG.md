@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/femiwiki/quibble-action/compare/v2.0.0...v2.0.1) (2026-07-03)
+
+
+### Bug Fixes
+
+* clone MediaWiki and dependencies from the GitHub mirrors ([#53](https://github.com/femiwiki/quibble-action/issues/53)) ([d94de77](https://github.com/femiwiki/quibble-action/commit/d94de77ca14e21ba9ac00b6d7cd71905091672d1))
+
 ## [2.0.0](https://github.com/femiwiki/quibble-action/compare/v1.0.0...v2.0.0) (2026-07-01)
 
 
