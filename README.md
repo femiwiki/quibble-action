@@ -214,6 +214,7 @@ older PHP, such as when testing an older MediaWiki branch:
 | Name | Default | Description |
 | --- | --- | --- |
 | `mediawiki-version` | `REL1_45` | MediaWiki branch to test against, for example `master` or `REL1_43`. |
+| `git-source` | `github` | Where MediaWiki and the dependencies are cloned from: `github` (the official read-only mirrors, immune to Gerrit's CI rate limiting) or `gerrit` (gerrit.wikimedia.org). |
 | `stage` | `all` | Stage to run. Any Quibble stage, or `phan` / `coverage`. |
 | `project-path` | `.` | Path to the extension or skin under test, relative to the workspace. Set it when the action is checked out at the workspace root (so it can be used as `uses: ./`) and the project is in a subdirectory. See [Testing from the same repository](#testing-from-the-same-repository). |
 | `dependencies` | (none) | Whitespace/comma separated dependency extensions/skins. Takes priority over the `requires` clause and phan config. See [Defining dependencies](#defining-dependencies). |
