@@ -36,6 +36,13 @@ inputs:
     default: "."
   mediawiki-version:
     default: REL1_45
+  git-source:
+    description: >-
+      Where MediaWiki and the dependency extensions/skins are cloned from:
+      `github` for the official read-only mirrors (github.com/wikimedia/*), or
+      `gerrit` for gerrit.wikimedia.org. The mirrors carry the same branches
+      and are not subject to Gerrit's rate limiting of CI runners.
+    default: github
   stage:
     description: All stages listed at https://doc.wikimedia.org/quibble/usage.html#stages. `phan` and `coverage` also supported.
     default: all
@@ -230,18 +237,28 @@ runs:
         BASE_DIR: ${{ steps.setup.outputs.dir }}
         MEDIAWIKI_VERSION: ${{ inputs.mediawiki-version }}
         DEPENDENCIES: ${{ steps.deps.outputs.dependencies }}
+        GIT_SOURCE: ${{ inputs.git-source }}
       run: |
-        # Download MediaWiki and extensions. Cloned from the official GitHub
+        # Download MediaWiki and extensions. By default from the official GitHub
         # mirrors (github.com/wikimedia/*, same refs as Gerrit): Gerrit
         # rate-limits the shared Actions runner IPs (HTTP 429), which made
-        # these clones fail intermittently.
+        # these clones fail intermittently. `git-source: gerrit` clones from
+        # gerrit.wikimedia.org instead. A Gerrit path maps to a mirror name by
+        # replacing slashes with dashes; mediawiki/core is the mediawiki mirror.
+        if [ "${GIT_SOURCE}" = 'gerrit' ]; then
+          core_url='https://gerrit.wikimedia.org/r/mediawiki/core'
+          repo_url() { echo "https://gerrit.wikimedia.org/r/$1"; }
+        else
+          core_url='https://github.com/wikimedia/mediawiki'
+          repo_url() { echo "https://github.com/wikimedia/$(echo "$1" | tr '/' '-')"; }
+        fi
         cd "$BASE_DIR"
         if [ ! -d src ]; then
-          git clone -b "${MEDIAWIKI_VERSION}" --depth 1 https://github.com/wikimedia/mediawiki src
-          git clone --recurse-submodules -b "${MEDIAWIKI_VERSION}" --depth 1 https://github.com/wikimedia/mediawiki-skins-Vector src/skins/Vector
+          git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "$core_url" src
+          git clone --recurse-submodules -b "${MEDIAWIKI_VERSION}" --depth 1 "$(repo_url mediawiki/skins/Vector)" src/skins/Vector
           for dep in $DEPENDENCIES; do
             if [ "$dep" = 'mediawiki/extensions/Wikibase' ]; then
-              git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "https://github.com/wikimedia/$(echo $dep | tr '/' '-')" src/"$(echo $dep | cut -d'/' -f2,3)"
+              git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "$(repo_url "$dep")" src/"$(echo $dep | cut -d'/' -f2,3)"
 
               cd src/"$(echo $dep | cut -d'/' -f2,3)"
               # Repoint dead phabricator submodule URLs at their github
@@ -256,7 +273,7 @@ runs:
               git submodule update --init
               cd -
             elif [ "$dep" = 'mediawiki/extensions/WikibaseLexeme' ]; then
-              git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "https://github.com/wikimedia/$(echo $dep | tr '/' '-')" src/"$(echo $dep | cut -d'/' -f2,3)"
+              git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "$(repo_url "$dep")" src/"$(echo $dep | cut -d'/' -f2,3)"
 
               cd src/"$(echo $dep | cut -d'/' -f2,3)"
               # Repoint the dead phabricator submodule URL at its github
@@ -268,7 +285,7 @@ runs:
               git submodule update --init
               cd -
             else
-              git clone --recurse-submodules -b "${MEDIAWIKI_VERSION}" --depth 1 "https://github.com/wikimedia/$(echo $dep | tr '/' '-')" src/"$(echo $dep | cut -d'/' -f2,3)"
+              git clone --recurse-submodules -b "${MEDIAWIKI_VERSION}" --depth 1 "$(repo_url "$dep")" src/"$(echo $dep | cut -d'/' -f2,3)"
             fi
           done
         fi
