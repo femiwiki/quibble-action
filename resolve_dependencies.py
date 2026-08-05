@@ -30,7 +30,7 @@ def normalize(name, kind='extensions'):
         return name
     if '/' in name:
         return 'mediawiki/' + name
-    return 'mediawiki/{}/{}'.format(kind, name)
+    return f"mediawiki/{kind}/{name}"
 
 
 def from_input(raw):
