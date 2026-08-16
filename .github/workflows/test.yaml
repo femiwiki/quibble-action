@@ -8,6 +8,16 @@ on:
 permissions:
   contents: read
 jobs:
+  # The coverage stage rests on this script's failure paths, which no Docker-backed job exercises.
+  check-junit:
+    name: check_junit.py
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: python3 test_check_junit.py
+
   quibble:
     name: phpunit-unit on BoilerPlate
     runs-on: ubuntu-latest

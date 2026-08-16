@@ -71,10 +71,13 @@ one of the two extra modes this action adds:
   MediaWiki's coverage tooling (`tests/phpunit/generatePHPUnitConfig.php`)
   currently lives only in the master branch; on other branches it is skipped.
   The stage fails when the suite it ran did not pass. The action reads the
-  JUnit report the run left behind and exits non-zero on any failure or error,
-  so that a broken test cannot sit in a green coverage job. See
-  [Publishing coverage](#publishing-coverage) for what that means for the
-  report itself.
+  JUnit report the run left behind and exits non-zero on any failure, any
+  error, a report it cannot read, or a run that collected no tests at all, so
+  that a broken test cannot sit in a green coverage job. That last condition
+  is worth knowing about: a project whose `tests/phpunit` directory exists but
+  yields nothing under the `extensions` test suite now fails where it used to
+  pass in silence. See [Publishing coverage](#publishing-coverage) for what
+  failing means for the report itself.
 
 [Quibble stages documentation]: https://doc.wikimedia.org/quibble/usage.html#stages
 
