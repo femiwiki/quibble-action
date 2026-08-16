@@ -405,6 +405,7 @@ runs:
         COVERAGE_DOCKER_IMAGE: ${{ steps.tags.outputs.coverage_image }}
         COVERAGE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.coverage }}
         DEPENDENCIES: ${{ steps.deps.outputs.dependencies }}
+        ACTION_PATH: ${{ github.action_path }}
       run: |
         # Coverage
         # MediaWiki's coverage helper (tests/phpunit/generatePHPUnitConfig.php,
@@ -422,6 +423,7 @@ runs:
           # so they resolve against that image's PHP. Resolving them in the separate
           # quibble image, whose PHP can differ, pulls in packages the coverage image
           # cannot run (e.g. Symfony 8 needs PHP 8.4 while quibble-coverage is 8.3).
+          rm -f log/junit.xml
           docker run \
             --entrypoint quibble-with-supervisord \
             -e "ZUUL_PROJECT=mediawiki/${TYPE}s/${EXTENSION_NAME}" \
@@ -434,6 +436,10 @@ runs:
             --packages-source composer \
             -c "${COMMAND}" \
             $DEPENDENCIES
+          # The container exits 0 even when PHPUnit failed, so the report it
+          # left behind is what decides the job. See check_junit.py.
+          sudo chmod -R a+rX log
+          python3 "$ACTION_PATH/check_junit.py" log/junit.xml
         fi
 
     - if: inputs.stage != 'phan' && inputs.stage != 'coverage'

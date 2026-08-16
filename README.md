@@ -70,6 +70,11 @@ one of the two extra modes this action adds:
   `coverage` output. It requires `mediawiki-version: master`, because
   MediaWiki's coverage tooling (`tests/phpunit/generatePHPUnitConfig.php`)
   currently lives only in the master branch; on other branches it is skipped.
+  The stage fails when the suite it ran did not pass. MediaWiki's
+  `mwext-phpunit-coverage` ignores PHPUnit's exit code on purpose, so that a
+  failing suite still publishes the report it produced; the action reads the
+  JUnit report the run left behind and fails on any failure or error, so that
+  a broken test cannot sit in a green coverage job.
 
 [Quibble stages documentation]: https://doc.wikimedia.org/quibble/usage.html#stages
 
