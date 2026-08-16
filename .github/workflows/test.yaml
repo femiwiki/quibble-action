@@ -31,13 +31,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: wikimedia/mediawiki-extensions-BoilerPlate
-          ref: REL1_45
+          ref: REL1_46
           path: project
           persist-credentials: false
       - uses: ./
         with:
           stage: phpunit-unit
-          mediawiki-version: REL1_45
+          mediawiki-version: REL1_46
           project-path: project
           upload-logs: true
 
@@ -51,13 +51,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: wikimedia/mediawiki-extensions-BoilerPlate
-          ref: REL1_45
+          ref: REL1_46
           path: project
           persist-credentials: false
       - uses: ./
         with:
           stage: phan
-          mediawiki-version: REL1_45
+          mediawiki-version: REL1_46
           project-path: project
 
   composer-test:
@@ -70,13 +70,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: wikimedia/mediawiki-extensions-BoilerPlate
-          ref: REL1_45
+          ref: REL1_46
           path: project
           persist-credentials: false
       - uses: ./
         with:
           stage: composer-test
-          mediawiki-version: REL1_45
+          mediawiki-version: REL1_46
           project-path: project
 
   coverage:
