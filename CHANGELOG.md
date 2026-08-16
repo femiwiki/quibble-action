@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.2](https://github.com/femiwiki/quibble-action/compare/v2.0.1...v2.0.2) (2026-08-16)
+
+
+### Bug Fixes
+
+* fail the coverage stage when its PHPUnit run did not pass ([#61](https://github.com/femiwiki/quibble-action/issues/61)) ([f406b07](https://github.com/femiwiki/quibble-action/commit/f406b073dd671a5273ba5f6ff92963531f75d62d))
+
 ## [2.0.1](https://github.com/femiwiki/quibble-action/compare/v2.0.0...v2.0.1) (2026-07-03)
 
 
