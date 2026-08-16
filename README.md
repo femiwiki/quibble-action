@@ -70,11 +70,11 @@ one of the two extra modes this action adds:
   `coverage` output. It requires `mediawiki-version: master`, because
   MediaWiki's coverage tooling (`tests/phpunit/generatePHPUnitConfig.php`)
   currently lives only in the master branch; on other branches it is skipped.
-  The stage fails when the suite it ran did not pass. MediaWiki's
-  `mwext-phpunit-coverage` ignores PHPUnit's exit code on purpose, so that a
-  failing suite still publishes the report it produced; the action reads the
-  JUnit report the run left behind and fails on any failure or error, so that
-  a broken test cannot sit in a green coverage job.
+  The stage fails when the suite it ran did not pass. The action reads the
+  JUnit report the run left behind and exits non-zero on any failure or error,
+  so that a broken test cannot sit in a green coverage job. See
+  [Publishing coverage](#publishing-coverage) for what that means for the
+  report itself.
 
 [Quibble stages documentation]: https://doc.wikimedia.org/quibble/usage.html#stages
 
@@ -150,6 +150,15 @@ the project under test out into a subdirectory and point `project-path` at it:
           name: coverage
           path: ${{ steps.quibble.outputs.coverage }}
 ```
+
+MediaWiki's `mwext-phpunit-coverage` drops PHPUnit's exit code on purpose, so
+that a run with some failing tests still publishes the coverage of the ones
+that passed. Wikimedia CI can afford that because its separate PHPUnit jobs
+already gate the tests themselves; a workflow that only runs the `coverage`
+stage has no such second opinion, and a failing suite would sit in a green job.
+The stage therefore fails, but only after the report has been written: it is
+complete on disk and `outputs.coverage` still points at it. To keep publishing
+it from a run whose tests failed, mark the publishing step `if: always()`.
 
 ## Docker images
 
