@@ -6,10 +6,10 @@
 # --testsuite argument directly under <testsuites>, carrying the totals of
 # everything nested below it, and a second <testsuite> per class repeating
 # them.
+import os
 import subprocess
 import sys
 import tempfile
-import os
 
 CHECKER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'check_junit.py')
 
@@ -33,7 +33,9 @@ def check(content):
         if content is not None:
             with open(path, 'w') as f:
                 f.write(content)
-        return subprocess.run([sys.executable, CHECKER, path], capture_output=True).returncode
+        return subprocess.run(
+            [sys.executable, CHECKER, path], capture_output=True, check=False
+        ).returncode
 
 
 CASES = [
