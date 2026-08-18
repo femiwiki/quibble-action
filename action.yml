@@ -391,7 +391,24 @@ runs:
         # Composer install
         cd "$PROJECT_PATH"
         if [ -e composer.json ]; then
-          composer install --prefer-dist --no-progress --no-interaction
+          # One flaky dist download out of the ~80 packages a phan config pulls
+          # in is enough to fail the job, and it is a transient TLS error from
+          # the registry often enough to be worth retrying. The composer cache
+          # does not cushion it either: a project with no lock file hashes to
+          # the same cache key forever, so the entry is written once and every
+          # install after that goes to the network anyway.
+          for attempt in 1 2 3; do
+            if composer install --prefer-dist --no-progress --no-interaction; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::composer install failed after 3 attempts."
+              exit 1
+            fi
+            delay=$((attempt * 5))
+            echo "::warning::composer install failed (attempt ${attempt} of 3), retrying in ${delay}s."
+            sleep "${delay}"
+          done
         fi
 
     - shell: bash
