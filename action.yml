@@ -58,6 +58,13 @@ inputs:
       shut down, as `mysqldump.sql`. Quibble supports this for `mysql` only,
       and the dump leaves the runner only with `upload-logs: true`.
     default: false
+  packages-source:
+    description: >-
+      Where core's PHP dependencies come from: `composer` to resolve them with
+      `composer update`, or `vendor` to install the pinned set from the
+      mediawiki/vendor repository, which is then cloned alongside MediaWiki.
+      The `phan` stage always uses `composer`; see the README.
+    default: composer
   dependencies:
     description: |
       Whitespace/comma separated list of dependency extensions or skins, e.g.
@@ -256,7 +263,7 @@ runs:
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.setup.outputs.dir }}/src
-        key: ${{ runner.os }}-${{ inputs.mediawiki-version }}-${{ hashFiles(format('{0}/extension.json', inputs.project-path), format('{0}/skin.json', inputs.project-path), format('{0}/.phan/config.php', inputs.project-path)) }}-${{ inputs.dependencies }}-${{ inputs.exclude-dependencies }}-${{ inputs.cache-key }}
+        key: ${{ runner.os }}-${{ inputs.mediawiki-version }}-${{ hashFiles(format('{0}/extension.json', inputs.project-path), format('{0}/skin.json', inputs.project-path), format('{0}/.phan/config.php', inputs.project-path)) }}-${{ inputs.dependencies }}-${{ inputs.exclude-dependencies }}-${{ inputs.packages-source }}-${{ inputs.cache-key }}
 
     - shell: bash
       env:
@@ -264,6 +271,7 @@ runs:
         MEDIAWIKI_VERSION: ${{ inputs.mediawiki-version }}
         DEPENDENCIES: ${{ steps.deps.outputs.dependencies }}
         GIT_SOURCE: ${{ inputs.git-source }}
+        PACKAGES_SOURCE: ${{ inputs.packages-source }}
       run: |
         # Download MediaWiki and extensions. By default from the official GitHub
         # mirrors (github.com/wikimedia/*, same refs as Gerrit): Gerrit
@@ -282,6 +290,13 @@ runs:
         if [ ! -d src ]; then
           git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "$core_url" src
           git clone --recurse-submodules -b "${MEDIAWIKI_VERSION}" --depth 1 "$(repo_url mediawiki/skins/Vector)" src/skins/Vector
+          # packages-source: vendor installs core's dependencies from the
+          # mediawiki/vendor repository, so that repository has to be in place.
+          # Quibble adds it to the repositories it clones itself, but --skip-zuul
+          # turns its cloning off, which leaves it to us like every other clone.
+          if [ "${PACKAGES_SOURCE}" = 'vendor' ]; then
+            git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "$(repo_url mediawiki/vendor)" src/vendor
+          fi
           for dep in $DEPENDENCIES; do
             if [ "$dep" = 'mediawiki/extensions/Wikibase' ]; then
               git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "$(repo_url "$dep")" src/"$(echo $dep | cut -d'/' -f2,3)"
@@ -314,6 +329,15 @@ runs:
               git clone --recurse-submodules -b "${MEDIAWIKI_VERSION}" --depth 1 "$(repo_url "$dep")" src/"$(echo $dep | cut -d'/' -f2,3)"
             fi
           done
+        fi
+        # A restored cache carries the vendor repository as the last run left
+        # it, and Quibble's require-dev step rewrites its composer.json and
+        # composer.lock in place. Re-running that over its own output cannot
+        # resolve ("locked to version ... and an update of this package was not
+        # requested"), so put the repository back to what a fresh clone gives.
+        if [ "${PACKAGES_SOURCE}" = 'vendor' ] && [ -d src/vendor ]; then
+          git -C src/vendor reset --hard
+          git -C src/vendor clean -fdx
         fi
         git -C src/ log -n 1 --format="%H"
 
@@ -371,6 +395,10 @@ runs:
         DEPENDENCIES: ${{ steps.deps.outputs.dependencies }}
       run: |
         # Composer install
+        # Hardcoded --packages-source composer, not the packages-source input:
+        # this runs --skip all, and under vendor Quibble adds its require-dev
+        # step only for a stage or a command, so phan would run against a tree
+        # without the dev dependencies its config expects.
         docker run \
           --entrypoint quibble-with-supervisord \
           -e "ZUUL_PROJECT=mediawiki/${TYPE}s/${EXTENSION_NAME}" \
@@ -433,6 +461,7 @@ runs:
         DEPENDENCIES: ${{ steps.deps.outputs.dependencies }}
         DB: ${{ inputs.db }}
         DUMP_DB: ${{ inputs.dump-db }}
+        PACKAGES_SOURCE: ${{ inputs.packages-source }}
         ACTION_PATH: ${{ github.action_path }}
       run: |
         # Coverage
@@ -465,7 +494,7 @@ runs:
             -v "$(pwd)"/log:/workspace/log \
             "${DOCKER_REGISTRY}/${DOCKER_ORG}/${COVERAGE_DOCKER_IMAGE}:${COVERAGE_DOCKER_LATEST_TAG}" \
             --skip-zuul \
-            --packages-source composer \
+            --packages-source "${PACKAGES_SOURCE}" \
             --db "${DB}" \
             $dump_db \
             -c "${COMMAND}" \
@@ -490,6 +519,7 @@ runs:
         DEPENDENCIES: ${{ steps.deps.outputs.dependencies }}
         DB: ${{ inputs.db }}
         DUMP_DB: ${{ inputs.dump-db }}
+        PACKAGES_SOURCE: ${{ inputs.packages-source }}
       run: |
         # Quibble
         image="${DOCKER_REGISTRY}/${DOCKER_ORG}/${QUIBBLE_DOCKER_IMAGE}:${QUIBBLE_DOCKER_LATEST_TAG}"
@@ -506,7 +536,7 @@ runs:
           -v "$(pwd)"/log:/workspace/log \
           "$image" \
           --skip-zuul \
-          --packages-source composer \
+          --packages-source "${PACKAGES_SOURCE}" \
           --db "${DB}" \
           $dump_db \
           --run "${STAGE}" \
