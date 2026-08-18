@@ -174,6 +174,32 @@ MediaWiki helper command rather than a Quibble stage. That run writes its own
 `junit.xml` into the same directory whatever this input is set to, and the
 action already reads it to decide whether the stage passed.
 
+### Skipping the npm install
+
+Quibble installs Node dependencies whenever the run needs them: for the
+`npm-test`, `qunit` and `api-testing` stages, and for the command the
+`coverage` stage runs. That last one is PHPUnit only and never touches Node, so
+`skip-npm-install` takes the step away:
+
+```yaml
+      - uses: femiwiki/quibble-action@dc8d9ec9d6c86ba9805a77736c68f974d250aa8f # v1.0.0
+        with:
+          stage: coverage
+          mediawiki-version: master
+          skip-npm-install: true
+```
+
+Composer dependencies are still installed, unlike Quibble's `--skip-deps`. Do
+not expect much of it as a speed-up: Quibble runs the npm install in parallel
+with the MediaWiki install, so it costs nothing unless it is the slower of the
+two. What it does remove is a network step, and with it a way for a run that
+needs no Node at all to fail on a registry hiccup.
+
+Setting it for a stage that does run Node tests will fail that run, and `all`
+is Quibble's default stage list, which contains all three of them. The action
+warns when the input and the stage contradict each other rather than letting
+the run fail somewhere further in.
+
 ### Defining dependencies
 
 Dependency extensions and skins are resolved from the **first** of these sources
@@ -331,6 +357,7 @@ older PHP, such as when testing an older MediaWiki branch:
 | `project-path` | `.` | Path to the extension or skin under test, relative to the workspace. Set it when the action is checked out at the workspace root (so it can be used as `uses: ./`) and the project is in a subdirectory. See [Testing from the same repository](#testing-from-the-same-repository). |
 | `packages-source` | `composer` | Where core's PHP dependencies come from: `composer` (resolve with `composer update`) or `vendor` (the pinned mediawiki/vendor set). See [Choosing where PHP dependencies come from](#choosing-where-php-dependencies-come-from). |
 | `phpunit-junit` | `false` | Write JUnit reports for the PHPUnit stages into the log directory. See [Reporting test results](#reporting-test-results). |
+| `skip-npm-install` | `false` | Skip the standalone `npm install`. For `coverage`, which runs no Node tests. See [Skipping the npm install](#skipping-the-npm-install). |
 | `dependencies` | (none) | Whitespace/comma separated dependency extensions/skins. Takes priority over the `requires` clause and phan config. See [Defining dependencies](#defining-dependencies). |
 | `exclude-dependencies` | (none) | Space-separated list of dependency names to skip. |
 | `cache-key` | `true` | Mixed into every cache key; change it to bust the caches. |

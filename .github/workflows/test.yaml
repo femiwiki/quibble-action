@@ -155,6 +155,9 @@ jobs:
           stage: coverage
           mediawiki-version: master
           project-path: project
+          # The coverage command is PHPUnit only, so this job doubles as the
+          # proof that the run does not need the npm install it skips.
+          skip-npm-install: true
       # Assert the coverage stage produced a report (the cover dir is non-empty).
       - name: Assert a coverage report was produced
         env:
