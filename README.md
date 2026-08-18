@@ -189,11 +189,14 @@ Quibble installs Node dependencies whenever the run needs them: for the
           skip-npm-install: true
 ```
 
-Composer dependencies are still installed, unlike Quibble's `--skip-deps`. Do
-not expect much of it as a speed-up: Quibble runs the npm install in parallel
-with the MediaWiki install, so it costs nothing unless it is the slower of the
-two. What it does remove is a network step, and with it a way for a run that
-needs no Node at all to fail on a registry hiccup.
+Composer dependencies are still installed, unlike Quibble's `--skip-deps`.
+Quibble runs the npm install in parallel with the MediaWiki install, so it only
+costs whatever it exceeds that install by — which turns out to be nearly all of
+it. On this repository's own coverage job the pair took 26.2s together, while
+the MediaWiki install alone takes 1.2s, and dropping the npm install took the
+whole containerised coverage step from 35.0s to 13.0s. It also removes a
+network step, and with it one way for a run that needs no Node at all to fail
+on a registry hiccup.
 
 Setting it for a stage that does run Node tests will fail that run, and `all`
 is Quibble's default stage list, which contains all three of them. The action
