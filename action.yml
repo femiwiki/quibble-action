@@ -52,6 +52,12 @@ inputs:
       `postgres`. Passed to Quibble as `--db`, which rejects any other value.
       The `phan` stage ignores it, since it installs no wiki.
     default: mysql
+  dump-db:
+    description: >-
+      Dump the database into the log directory before the run's backends are
+      shut down, as `mysqldump.sql`. Quibble supports this for `mysql` only,
+      and the dump leaves the runner only with `upload-logs: true`.
+    default: false
   dependencies:
     description: |
       Whitespace/comma separated list of dependency extensions or skins, e.g.
@@ -91,8 +97,22 @@ runs:
       shell: bash
       env:
         PROJECT_PATH: ${{ inputs.project-path }}
+        DB: ${{ inputs.db }}
+        DUMP_DB: ${{ inputs.dump-db }}
+        UPLOAD_LOGS: ${{ inputs.upload-logs }}
       run: |
         # Set up
+        # A dump nobody can read is worth a warning rather than a silent no-op:
+        # Quibble writes it to the log dir, which leaves the runner only as the
+        # logs artifact, and only its mysql backend implements dumping at all.
+        if [ "${DUMP_DB}" == 'true' ]; then
+          if [ "${UPLOAD_LOGS}" != 'true' ]; then
+            echo "::warning::dump-db writes the dump to the log directory, which is only kept with upload-logs: true."
+          fi
+          if [ "${DB}" != 'mysql' ]; then
+            echo "::warning::dump-db is supported by the mysql backend only; Quibble will skip the dump for db: ${DB}."
+          fi
+        fi
         # Base directory for all scratch dirs. RUNNER_TEMP avoids hardcoding the
         # home path, which is not portable to self-hosted, container, or non-Linux
         # runners, and is emptied at the start of each job.
@@ -412,6 +432,7 @@ runs:
         COVERAGE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.coverage }}
         DEPENDENCIES: ${{ steps.deps.outputs.dependencies }}
         DB: ${{ inputs.db }}
+        DUMP_DB: ${{ inputs.dump-db }}
         ACTION_PATH: ${{ github.action_path }}
       run: |
         # Coverage
@@ -431,6 +452,10 @@ runs:
           # quibble image, whose PHP can differ, pulls in packages the coverage image
           # cannot run (e.g. Symfony 8 needs PHP 8.4 while quibble-coverage is 8.3).
           rm -f log/junit.xml
+          dump_db=''
+          if [ "${DUMP_DB}" == 'true' ]; then
+            dump_db='--dump-db-postrun'
+          fi
           docker run \
             --entrypoint quibble-with-supervisord \
             -e "ZUUL_PROJECT=mediawiki/${TYPE}s/${EXTENSION_NAME}" \
@@ -442,6 +467,7 @@ runs:
             --skip-zuul \
             --packages-source composer \
             --db "${DB}" \
+            $dump_db \
             -c "${COMMAND}" \
             $DEPENDENCIES
           # The container exits 0 even when PHPUnit failed, so the report it
@@ -463,9 +489,14 @@ runs:
         STAGE: ${{ inputs.stage }}
         DEPENDENCIES: ${{ steps.deps.outputs.dependencies }}
         DB: ${{ inputs.db }}
+        DUMP_DB: ${{ inputs.dump-db }}
       run: |
         # Quibble
         image="${DOCKER_REGISTRY}/${DOCKER_ORG}/${QUIBBLE_DOCKER_IMAGE}:${QUIBBLE_DOCKER_LATEST_TAG}"
+        dump_db=''
+        if [ "${DUMP_DB}" == 'true' ]; then
+          dump_db='--dump-db-postrun'
+        fi
         status=0
         docker run \
           --entrypoint quibble-with-supervisord \
@@ -477,6 +508,7 @@ runs:
           --skip-zuul \
           --packages-source composer \
           --db "${DB}" \
+          $dump_db \
           --run "${STAGE}" \
           $DEPENDENCIES || status=$?
         # composer-test: surface phpcs findings as inline annotations. phpcs has

@@ -102,6 +102,23 @@ cheaper choice for a project that does not care which backend it runs under.
 The `phan` stage installs no wiki, so `db` does not apply to it and is not
 passed on.
 
+`dump-db` dumps the database as `mysqldump.sql` before the run's backends shut
+down, which is how you get at the state a failing integration test left behind:
+
+```yaml
+      - uses: femiwiki/quibble-action@dc8d9ec9d6c86ba9805a77736c68f974d250aa8f # v1.0.0
+        with:
+          dump-db: true
+          upload-logs: true
+```
+
+It needs `upload-logs: true` to be of any use, since Quibble writes the dump
+into the log directory and that directory leaves the runner only as the
+artifact. Quibble implements dumping for `mysql` only; under `sqlite` or
+`postgres` it logs that the backend cannot dump and carries on. The action
+warns about both cases rather than leaving you to find an artifact with no dump
+in it.
+
 ### Defining dependencies
 
 Dependency extensions and skins are resolved from the **first** of these sources
@@ -255,6 +272,7 @@ older PHP, such as when testing an older MediaWiki branch:
 | `git-source` | `github` | Where MediaWiki and the dependencies are cloned from: `github` (the official read-only mirrors, immune to Gerrit's CI rate limiting) or `gerrit` (gerrit.wikimedia.org). |
 | `stage` | `all` | Stage to run. Any Quibble stage, or `phan` / `coverage`. |
 | `db` | `mysql` | Database backend MediaWiki is installed on: `mysql`, `sqlite` or `postgres`. See [Choosing a database backend](#choosing-a-database-backend). |
+| `dump-db` | `false` | Dump the database into the log directory before shutdown (`mysql` only, needs `upload-logs`). See [Choosing a database backend](#choosing-a-database-backend). |
 | `project-path` | `.` | Path to the extension or skin under test, relative to the workspace. Set it when the action is checked out at the workspace root (so it can be used as `uses: ./`) and the project is in a subdirectory. See [Testing from the same repository](#testing-from-the-same-repository). |
 | `dependencies` | (none) | Whitespace/comma separated dependency extensions/skins. Takes priority over the `requires` clause and phan config. See [Defining dependencies](#defining-dependencies). |
 | `exclude-dependencies` | (none) | Space-separated list of dependency names to skip. |
