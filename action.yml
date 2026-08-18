@@ -498,16 +498,18 @@ runs:
       run: |
         # Coverage
         # MediaWiki's coverage helper (tests/phpunit/generatePHPUnitConfig.php,
-        # invoked by mw{ext,skin}-phpunit-coverage) currently exists only on the
+        # invoked by mwext-phpunit-coverage) currently exists only on the
         # master branch, so coverage requires mediawiki-version: master.
         if [ "${MEDIAWIKI_VERSION}" != 'master' ]; then
           echo "::warning::Skipping coverage: it requires mediawiki-version: master (MediaWiki's coverage tooling lives only in master)."
         elif [ -d "src/${TYPE}s/${EXTENSION_NAME}/tests/phpunit" ]; then
-          if [ "${TYPE}" == 'skin' ]; then
-            COMMAND=mwskin-phpunit-coverage
-          else
-            COMMAND=mwext-phpunit-coverage
-          fi
+          # mwext-phpunit-coverage covers skins too, despite the name: it
+          # derives the project directory from ZUUL_PROJECT, which this action
+          # sets to mediawiki/skins/<name> for a skin, and the `extensions`
+          # test suite it runs is built from ExtensionRegistry::getQueue(),
+          # which holds skins as well. There is no mwskin- counterpart in any
+          # image; calling one exited 127 and failed the stage for every skin.
+          COMMAND=mwext-phpunit-coverage
           # Install dependencies inside the coverage image itself (no --skip-deps),
           # so they resolve against that image's PHP. Resolving them in the separate
           # quibble image, whose PHP can differ, pulls in packages the coverage image
@@ -567,8 +569,9 @@ runs:
           dump_db='--dump-db-postrun'
         fi
         # Not passed to the coverage step: --phpunit-junit reaches Quibble's
-        # PHPUnit stage commands, and coverage drives PHPUnit through -c
-        # instead, where the flag is never read. That run writes its own
+        # PHPUnit stage commands, and coverage drives PHPUnit through
+        # -c mwext-phpunit-coverage instead, where the flag is never read.
+        # That run writes its own
         # junit.xml, which check_junit.py already reads.
         phpunit_junit=''
         if [ "${PHPUNIT_JUNIT}" == 'true' ]; then

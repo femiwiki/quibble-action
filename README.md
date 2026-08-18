@@ -67,7 +67,9 @@ one of the two extra modes this action adds:
   [cs2pr] for the same annotations. The version is detected from the project's
   `phan/phan` entry, so either way works with no configuration;
 - `coverage` runs PHPUnit code coverage and exposes the report through the
-  `coverage` output. It requires `mediawiki-version: master`, because
+  `coverage` output. It works the same for a skin as for an extension: both go
+  through MediaWiki's `mwext-phpunit-coverage`, which reads the project path
+  from the environment rather than assuming an extension. It requires `mediawiki-version: master`, because
   MediaWiki's coverage tooling (`tests/phpunit/generatePHPUnitConfig.php`)
   currently lives only in the master branch; on other branches it is skipped.
   The stage fails when the suite it ran did not pass. The action reads the
