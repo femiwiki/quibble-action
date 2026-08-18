@@ -165,3 +165,42 @@ jobs:
         run: |
           ls -la "$COVER_DIR"
           test -n "$(ls -A "$COVER_DIR" 2>/dev/null)"
+
+  coverage-skin:
+    name: coverage on MinervaNeue
+    runs-on: ubuntu-latest
+    steps:
+      # The same stage against a skin, the half of the coverage path that used
+      # to call a command no image provides. MinervaNeue rather than Vector:
+      # the action clones Vector into src/skins/Vector for every run, so a
+      # Vector checkout as the project under test would be copied into that
+      # directory instead of over it.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: wikimedia/mediawiki-skins-MinervaNeue
+          ref: master
+          path: project
+          persist-credentials: false
+      - id: quibble
+        uses: ./
+        with:
+          stage: coverage
+          mediawiki-version: master
+          project-path: project
+          # MinervaNeue declares no requires, so dependencies come from its
+          # phan config: Vector and MobileFrontend. Vector has to go, because
+          # the action clones it into src/skins/Vector for every run and the
+          # dependency loop then fails on the directory already being there
+          # (#81). MobileFrontend stays, even though no phpunit test here
+          # references it: excluding both would empty the dependency list, and
+          # the exclusion loop dies on an empty result (#82).
+          exclude-dependencies: Vector
+      - name: Assert a coverage report was produced
+        env:
+          COVER_DIR: ${{ steps.quibble.outputs.coverage }}
+        run: |
+          ls -la "$COVER_DIR"
+          test -n "$(ls -A "$COVER_DIR" 2>/dev/null)"
