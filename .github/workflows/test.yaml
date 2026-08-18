@@ -42,12 +42,14 @@ jobs:
           project-path: project
           upload-logs: true
           dump-db: true
-      # dump-db is only observable through the log directory, so assert the
-      # dump is there and not empty.
-      - name: Assert the database was dumped
+          phpunit-junit: true
+      # Neither input is observable anywhere but the log directory.
+      - name: Assert the dump and the JUnit report were written
         env:
           LOG_DIR: ${{ steps.quibble.outputs.logs }}
-        run: test -s "$LOG_DIR/mysqldump.sql"
+        run: |
+          test -s "$LOG_DIR/mysqldump.sql"
+          test -s "$LOG_DIR/junit-unit.xml"
 
   quibble-sqlite:
     name: phpunit-unit on BoilerPlate (sqlite)
