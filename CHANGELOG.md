@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.0](https://github.com/femiwiki/quibble-action/compare/v2.0.2...v2.1.0) (2026-08-18)
+
+
+### Features
+
+* add a db input to choose the database backend ([#71](https://github.com/femiwiki/quibble-action/issues/71)) ([19c1e82](https://github.com/femiwiki/quibble-action/commit/19c1e829d09dbbd4b5a2267cd2b7637482acabca))
+* add a dump-db input to keep the database of a failed run ([#73](https://github.com/femiwiki/quibble-action/issues/73)) ([9c32404](https://github.com/femiwiki/quibble-action/commit/9c32404c78cd6d84e013a810903c7707110570c4))
+* add a logs output ([#76](https://github.com/femiwiki/quibble-action/issues/76)) ([6bd45bd](https://github.com/femiwiki/quibble-action/commit/6bd45bd5ca48f774f731778e54fba899a0f46ca6))
+* add a packages-source input to install from mediawiki/vendor ([#74](https://github.com/femiwiki/quibble-action/issues/74)) ([d51276b](https://github.com/femiwiki/quibble-action/commit/d51276bcb1327fe23cb13dcc6c880630b13f0f4b))
+* add a phpunit-junit input ([#75](https://github.com/femiwiki/quibble-action/issues/75)) ([bb91574](https://github.com/femiwiki/quibble-action/commit/bb9157414bb7fff8e0d963f8775b5d930e65fb7a))
+* add a skip-npm-install input ([#77](https://github.com/femiwiki/quibble-action/issues/77)) ([ccc9364](https://github.com/femiwiki/quibble-action/commit/ccc93643cf3153f442abf50f4cf82601af888bb8))
+
 ## [2.0.2](https://github.com/femiwiki/quibble-action/compare/v2.0.1...v2.0.2) (2026-08-16)
 
 
