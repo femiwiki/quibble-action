@@ -18,6 +18,15 @@ jobs:
           persist-credentials: false
       - run: python3 test_check_junit.py
 
+  resolve-dependencies:
+    name: resolve_dependencies.py
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: python3 test_resolve_dependencies.py
+
   quibble:
     name: phpunit-unit on BoilerPlate
     runs-on: ubuntu-latest
@@ -95,6 +104,29 @@ jobs:
           mediawiki-version: REL1_46
           project-path: project
           packages-source: vendor
+
+  quibble-skin:
+    name: phpunit-unit on Example
+    runs-on: ubuntu-latest
+    steps:
+      # The same stage against a skin, which is what reaches skin.json
+      # detection in the setup step and the src/skins/ placement in "Prepare
+      # directories". Example rather than a larger skin: those two paths do not
+      # care how much code the skin has, and it keeps the job cheap.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: wikimedia/mediawiki-skins-Example
+          ref: REL1_46
+          path: project
+          persist-credentials: false
+      - uses: ./
+        with:
+          stage: phpunit-unit
+          mediawiki-version: REL1_46
+          project-path: project
 
   phan:
     name: phan on BoilerPlate
