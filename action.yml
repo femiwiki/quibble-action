@@ -44,7 +44,11 @@ inputs:
       and are not subject to Gerrit's rate limiting of CI runners.
     default: github
   stage:
-    description: All stages listed at https://doc.wikimedia.org/quibble/usage.html#stages. `phan` and `coverage` also supported.
+    description: >-
+      Stage to run, or a comma separated list of them, as Quibble's `--run`
+      takes. All stages are listed at
+      https://doc.wikimedia.org/quibble/usage.html#stages; `phan` and
+      `coverage` are also supported.
     default: all
   db:
     description: >-
