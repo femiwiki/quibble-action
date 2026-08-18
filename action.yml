@@ -241,7 +241,11 @@ runs:
         cd "$PROJECT_PATH"
         DEPENDENCIES="$(python3 "$ACTION_PATH/resolve_dependencies.py" "$DEPENDENCIES_INPUT")"
         for dep in ${EXCLUDE_DEPENDENCIES}; do
-          DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v /${dep}$)"
+          # grep exits 1 when it filters out every line, and this assignment is
+          # a command whose status -e acts on, so excluding the last remaining
+          # dependency would kill the step. Excluding everything the resolver
+          # found is a legitimate thing to ask for.
+          DEPENDENCIES="$(echo "$DEPENDENCIES" | grep -v "/${dep}$" || true)"
         done
         DEPENDENCIES="$(echo $DEPENDENCIES | tr '\n' ' ')"
         echo "dependencies=${DEPENDENCIES}" >> "$GITHUB_OUTPUT"

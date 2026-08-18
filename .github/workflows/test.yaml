@@ -194,10 +194,11 @@ jobs:
           # phan config: Vector and MobileFrontend. Vector has to go, because
           # the action clones it into src/skins/Vector for every run and the
           # dependency loop then fails on the directory already being there
-          # (#81). MobileFrontend stays, even though no phpunit test here
-          # references it: excluding both would empty the dependency list, and
-          # the exclusion loop dies on an empty result (#82).
-          exclude-dependencies: Vector
+          # (#81). MobileFrontend is a phan-time dependency that none of the
+          # 9 phpunit tests reference, so cloning and enabling it would only
+          # make the job slower. Excluding both empties the dependency list,
+          # which is the case the exclusion loop used to die on.
+          exclude-dependencies: Vector MobileFrontend
       - name: Assert a coverage report was produced
         env:
           COVER_DIR: ${{ steps.quibble.outputs.coverage }}
