@@ -73,6 +73,15 @@ inputs:
       output points at the directory; see the README for feeding them to a
       test reporter.
     default: false
+  skip-npm-install:
+    description: >-
+      Skip the standalone `npm install` Quibble adds for the stages that need
+      Node (`npm-test`, `qunit`, `api-testing`) and for the `coverage` stage's
+      command. Composer dependencies are still installed. Worth setting for
+      `coverage`, which runs PHPUnit only; setting it for a stage that does run
+      Node tests will fail that run, and the action warns when the two are
+      combined.
+    default: false
   dependencies:
     description: |
       Whitespace/comma separated list of dependency extensions or skins, e.g.
@@ -117,8 +126,20 @@ runs:
         DB: ${{ inputs.db }}
         DUMP_DB: ${{ inputs.dump-db }}
         UPLOAD_LOGS: ${{ inputs.upload-logs }}
+        STAGE: ${{ inputs.stage }}
+        SKIP_NPM_INSTALL: ${{ inputs.skip-npm-install }}
       run: |
         # Set up
+        # skip-npm-install takes away what the Node stages need to run at all,
+        # and `all` is Quibble's default stage list, which contains all three of
+        # them. The stage may be a comma separated list, hence the match.
+        if [ "${SKIP_NPM_INSTALL}" == 'true' ]; then
+          case ",${STAGE}," in
+            *,all,* | *,npm-test,* | *,qunit,* | *,api-testing,*)
+              echo "::warning::skip-npm-install is set, but stage '${STAGE}' runs Node tests that need the npm install it skips."
+              ;;
+          esac
+        fi
         # A dump nobody can read is worth a warning rather than a silent no-op:
         # Quibble writes it to the log dir, which leaves the runner only as the
         # logs artifact, and only its mysql backend implements dumping at all.
@@ -472,6 +493,7 @@ runs:
         DB: ${{ inputs.db }}
         DUMP_DB: ${{ inputs.dump-db }}
         PACKAGES_SOURCE: ${{ inputs.packages-source }}
+        SKIP_NPM_INSTALL: ${{ inputs.skip-npm-install }}
         ACTION_PATH: ${{ github.action_path }}
       run: |
         # Coverage
@@ -495,6 +517,10 @@ runs:
           if [ "${DUMP_DB}" == 'true' ]; then
             dump_db='--dump-db-postrun'
           fi
+          skip_npm_install=''
+          if [ "${SKIP_NPM_INSTALL}" == 'true' ]; then
+            skip_npm_install='--skip-npm-install'
+          fi
           docker run \
             --entrypoint quibble-with-supervisord \
             -e "ZUUL_PROJECT=mediawiki/${TYPE}s/${EXTENSION_NAME}" \
@@ -507,6 +533,7 @@ runs:
             --packages-source "${PACKAGES_SOURCE}" \
             --db "${DB}" \
             $dump_db \
+            $skip_npm_install \
             -c "${COMMAND}" \
             $DEPENDENCIES
           # The container exits 0 even when PHPUnit failed, so the report it
@@ -531,6 +558,7 @@ runs:
         DUMP_DB: ${{ inputs.dump-db }}
         PACKAGES_SOURCE: ${{ inputs.packages-source }}
         PHPUNIT_JUNIT: ${{ inputs.phpunit-junit }}
+        SKIP_NPM_INSTALL: ${{ inputs.skip-npm-install }}
       run: |
         # Quibble
         image="${DOCKER_REGISTRY}/${DOCKER_ORG}/${QUIBBLE_DOCKER_IMAGE}:${QUIBBLE_DOCKER_LATEST_TAG}"
@@ -546,6 +574,10 @@ runs:
         if [ "${PHPUNIT_JUNIT}" == 'true' ]; then
           phpunit_junit='--phpunit-junit'
         fi
+        skip_npm_install=''
+        if [ "${SKIP_NPM_INSTALL}" == 'true' ]; then
+          skip_npm_install='--skip-npm-install'
+        fi
         status=0
         docker run \
           --entrypoint quibble-with-supervisord \
@@ -559,6 +591,7 @@ runs:
           --db "${DB}" \
           $dump_db \
           $phpunit_junit \
+          $skip_npm_install \
           --run "${STAGE}" \
           $DEPENDENCIES || status=$?
         # composer-test: surface phpcs findings as inline annotations. phpcs has
