@@ -137,7 +137,9 @@ versions the constraints allow, so it is where a dependency's own new release
 breaks you; `vendor` pins exactly what production ships, so it is where a
 dependency your code needs turns out not to be there at all. The action clones
 mediawiki/vendor for you when this is set, on the branch given by
-`mediawiki-version`.
+`mediawiki-version`, and resets it before each run: Quibble installs core's
+dev dependencies by rewriting that repository's `composer.json` in place, which
+a cached checkout would otherwise carry into the next run.
 
 The `phan` stage always installs with `composer`, whatever this is set to.
 Phan's dependency install runs Quibble with `--skip all`, and under `vendor`

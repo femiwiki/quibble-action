@@ -330,6 +330,15 @@ runs:
             fi
           done
         fi
+        # A restored cache carries the vendor repository as the last run left
+        # it, and Quibble's require-dev step rewrites its composer.json and
+        # composer.lock in place. Re-running that over its own output cannot
+        # resolve ("locked to version ... and an update of this package was not
+        # requested"), so put the repository back to what a fresh clone gives.
+        if [ "${PACKAGES_SOURCE}" = 'vendor' ] && [ -d src/vendor ]; then
+          git -C src/vendor reset --hard
+          git -C src/vendor clean -fdx
+        fi
         git -C src/ log -n 1 --format="%H"
 
     - name: Cache dependencies (composer)
