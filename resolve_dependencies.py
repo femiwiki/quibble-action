@@ -1,5 +1,21 @@
 # A script to resolve dependencies of a MediaWiki extension/skin for Quibble.
 #
+# Quibble can do half of this itself, with --resolve-requires, and Wikimedia's
+# extension gate uses exactly that. It cannot be delegated here, and the reason
+# is structural rather than a matter of wiring: quibble/cmd.py builds
+# ResolveRequires inside `if not args.skip_zuul:`, next to the ZuulClone step
+# it extends. This action always passes --skip-zuul, because it clones
+# MediaWiki and the dependencies itself -- from the GitHub mirrors rather than
+# Gerrit, into a directory it caches between runs. So --resolve-requires would
+# never be reached, and reaching it would mean handing the cloning back to
+# Quibble and giving up the mirrors and the cache with it.
+#
+# The duplication is therefore deliberate. The half that matters is the
+# `requires` clause: MediaWiki's convention for it lives upstream and this is a
+# snapshot of it, so it is worth re-reading quibble/commands.py ResolveRequires
+# when that convention changes. The phan-config source below is ours alone --
+# Quibble does not read .phan/config.php at all.
+#
 # Dependencies are resolved from the first source that yields anything, in this
 # priority order:
 #

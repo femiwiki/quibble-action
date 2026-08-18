@@ -228,6 +228,12 @@ that yields anything:
 
 Use `exclude-dependencies` to drop specific resolved entries by name.
 
+Quibble has its own `--resolve-requires` for the `requires` clause, and
+Wikimedia's gate uses it, but this action cannot: Quibble only builds that step
+when it is doing the cloning, and this action clones for itself so that it can
+use the GitHub mirrors and cache the result. `resolve_dependencies.py` explains
+the trade in full.
+
 ### Testing several MediaWiki versions
 
 ```yaml
