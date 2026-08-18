@@ -119,6 +119,33 @@ artifact. Quibble implements dumping for `mysql` only; under `sqlite` or
 warns about both cases rather than leaving you to find an artifact with no dump
 in it.
 
+### Choosing where PHP dependencies come from
+
+Core's PHP dependencies are resolved with `composer update` by default. Set
+`packages-source: vendor` to install the pinned set from the
+[mediawiki/vendor] repository instead, which is what production runs and what
+half of Wikimedia's own gate tests:
+
+```yaml
+      - uses: femiwiki/quibble-action@dc8d9ec9d6c86ba9805a77736c68f974d250aa8f # v1.0.0
+        with:
+          packages-source: vendor
+```
+
+The two differ in what they can catch. `composer` resolves to the newest
+versions the constraints allow, so it is where a dependency's own new release
+breaks you; `vendor` pins exactly what production ships, so it is where a
+dependency your code needs turns out not to be there at all. The action clones
+mediawiki/vendor for you when this is set, on the branch given by
+`mediawiki-version`.
+
+The `phan` stage always installs with `composer`, whatever this is set to.
+Phan's dependency install runs Quibble with `--skip all`, and under `vendor`
+Quibble adds its `require-dev` step only for a stage or a command, so phan
+would otherwise analyse a tree missing the dev dependencies its config expects.
+
+[mediawiki/vendor]: https://gerrit.wikimedia.org/g/mediawiki/vendor
+
 ### Defining dependencies
 
 Dependency extensions and skins are resolved from the **first** of these sources
@@ -274,6 +301,7 @@ older PHP, such as when testing an older MediaWiki branch:
 | `db` | `mysql` | Database backend MediaWiki is installed on: `mysql`, `sqlite` or `postgres`. See [Choosing a database backend](#choosing-a-database-backend). |
 | `dump-db` | `false` | Dump the database into the log directory before shutdown (`mysql` only, needs `upload-logs`). See [Choosing a database backend](#choosing-a-database-backend). |
 | `project-path` | `.` | Path to the extension or skin under test, relative to the workspace. Set it when the action is checked out at the workspace root (so it can be used as `uses: ./`) and the project is in a subdirectory. See [Testing from the same repository](#testing-from-the-same-repository). |
+| `packages-source` | `composer` | Where core's PHP dependencies come from: `composer` (resolve with `composer update`) or `vendor` (the pinned mediawiki/vendor set). See [Choosing where PHP dependencies come from](#choosing-where-php-dependencies-come-from). |
 | `dependencies` | (none) | Whitespace/comma separated dependency extensions/skins. Takes priority over the `requires` clause and phan config. See [Defining dependencies](#defining-dependencies). |
 | `exclude-dependencies` | (none) | Space-separated list of dependency names to skip. |
 | `cache-key` | `true` | Mixed into every cache key; change it to bust the caches. |
