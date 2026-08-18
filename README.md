@@ -81,6 +81,27 @@ one of the two extra modes this action adds:
 
 [Quibble stages documentation]: https://doc.wikimedia.org/quibble/usage.html#stages
 
+### Choosing a database backend
+
+MediaWiki is installed on MySQL by default, the backend Quibble itself defaults
+to. Set `db` to test on the one the project actually ships on:
+
+```yaml
+      - uses: femiwiki/quibble-action@dc8d9ec9d6c86ba9805a77736c68f974d250aa8f # v1.0.0
+        with:
+          db: sqlite
+```
+
+Quibble accepts `mysql`, `sqlite` and `postgres`, and rejects anything else, so
+a typo fails the run rather than falling back to a backend nobody asked for.
+Database-specific breakage (schema DDL, SQL dialect differences) is what
+Wikimedia CI runs its per-backend Quibble jobs to catch; a matrix over `db` does
+the same here. `sqlite` also needs no database server, which makes it the
+cheaper choice for a project that does not care which backend it runs under.
+
+The `phan` stage installs no wiki, so `db` does not apply to it and is not
+passed on.
+
 ### Defining dependencies
 
 Dependency extensions and skins are resolved from the **first** of these sources
@@ -233,6 +254,7 @@ older PHP, such as when testing an older MediaWiki branch:
 | `mediawiki-version` | `REL1_45` | MediaWiki branch to test against, for example `master` or `REL1_43`. |
 | `git-source` | `github` | Where MediaWiki and the dependencies are cloned from: `github` (the official read-only mirrors, immune to Gerrit's CI rate limiting) or `gerrit` (gerrit.wikimedia.org). |
 | `stage` | `all` | Stage to run. Any Quibble stage, or `phan` / `coverage`. |
+| `db` | `mysql` | Database backend MediaWiki is installed on: `mysql`, `sqlite` or `postgres`. See [Choosing a database backend](#choosing-a-database-backend). |
 | `project-path` | `.` | Path to the extension or skin under test, relative to the workspace. Set it when the action is checked out at the workspace root (so it can be used as `uses: ./`) and the project is in a subdirectory. See [Testing from the same repository](#testing-from-the-same-repository). |
 | `dependencies` | (none) | Whitespace/comma separated dependency extensions/skins. Takes priority over the `requires` clause and phan config. See [Defining dependencies](#defining-dependencies). |
 | `exclude-dependencies` | (none) | Space-separated list of dependency names to skip. |

@@ -46,6 +46,12 @@ inputs:
   stage:
     description: All stages listed at https://doc.wikimedia.org/quibble/usage.html#stages. `phan` and `coverage` also supported.
     default: all
+  db:
+    description: >-
+      Database backend MediaWiki is installed on: `mysql`, `sqlite` or
+      `postgres`. Passed to Quibble as `--db`, which rejects any other value.
+      The `phan` stage ignores it, since it installs no wiki.
+    default: mysql
   dependencies:
     description: |
       Whitespace/comma separated list of dependency extensions or skins, e.g.
@@ -405,6 +411,7 @@ runs:
         COVERAGE_DOCKER_IMAGE: ${{ steps.tags.outputs.coverage_image }}
         COVERAGE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.coverage }}
         DEPENDENCIES: ${{ steps.deps.outputs.dependencies }}
+        DB: ${{ inputs.db }}
         ACTION_PATH: ${{ github.action_path }}
       run: |
         # Coverage
@@ -434,6 +441,7 @@ runs:
             "${DOCKER_REGISTRY}/${DOCKER_ORG}/${COVERAGE_DOCKER_IMAGE}:${COVERAGE_DOCKER_LATEST_TAG}" \
             --skip-zuul \
             --packages-source composer \
+            --db "${DB}" \
             -c "${COMMAND}" \
             $DEPENDENCIES
           # The container exits 0 even when PHPUnit failed, so the report it
@@ -454,6 +462,7 @@ runs:
         QUIBBLE_DOCKER_LATEST_TAG: ${{ steps.tags.outputs.quibble }}
         STAGE: ${{ inputs.stage }}
         DEPENDENCIES: ${{ steps.deps.outputs.dependencies }}
+        DB: ${{ inputs.db }}
       run: |
         # Quibble
         image="${DOCKER_REGISTRY}/${DOCKER_ORG}/${QUIBBLE_DOCKER_IMAGE}:${QUIBBLE_DOCKER_LATEST_TAG}"
@@ -467,6 +476,7 @@ runs:
           "$image" \
           --skip-zuul \
           --packages-source composer \
+          --db "${DB}" \
           --run "${STAGE}" \
           $DEPENDENCIES || status=$?
         # composer-test: surface phpcs findings as inline annotations. phpcs has
@@ -491,9 +501,11 @@ runs:
       env:
         BASE_DIR: ${{ steps.setup.outputs.dir }}
       run: |
-        # Quibble runs in Docker as root, so some logs (for example
-        # mysql-error.log) land root-owned and unreadable by the runner user,
-        # which fails the upload step. Make the log tree readable first.
+        # Quibble runs in Docker as root, so some logs land root-owned and
+        # unreadable by the runner user, which fails the upload step. Make the
+        # log tree readable first. Not guarded on `db`: mysql-error.log is only
+        # the known case, the ownership comes from the container rather than
+        # from any one backend, and a chmod of a log tree costs nothing.
         if [ -d "$BASE_DIR/log" ]; then
           sudo chmod -R a+rX "$BASE_DIR/log"
         fi
