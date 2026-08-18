@@ -65,6 +65,14 @@ inputs:
       mediawiki/vendor repository, which is then cloned alongside MediaWiki.
       The `phan` stage always uses `composer`; see the README.
     default: composer
+  phpunit-junit:
+    description: >-
+      Have the PHPUnit stages write JUnit reports into the log directory, as
+      `junit-unit.xml`, `junit-dbless.xml`, `junit-db.xml` and
+      `junit-standalone.xml` for the stage that produced them. The `logs`
+      output points at the directory; see the README for feeding them to a
+      test reporter.
+    default: false
   dependencies:
     description: |
       Whitespace/comma separated list of dependency extensions or skins, e.g.
@@ -522,12 +530,21 @@ runs:
         DB: ${{ inputs.db }}
         DUMP_DB: ${{ inputs.dump-db }}
         PACKAGES_SOURCE: ${{ inputs.packages-source }}
+        PHPUNIT_JUNIT: ${{ inputs.phpunit-junit }}
       run: |
         # Quibble
         image="${DOCKER_REGISTRY}/${DOCKER_ORG}/${QUIBBLE_DOCKER_IMAGE}:${QUIBBLE_DOCKER_LATEST_TAG}"
         dump_db=''
         if [ "${DUMP_DB}" == 'true' ]; then
           dump_db='--dump-db-postrun'
+        fi
+        # Not passed to the coverage step: --phpunit-junit reaches Quibble's
+        # PHPUnit stage commands, and coverage drives PHPUnit through -c
+        # instead, where the flag is never read. That run writes its own
+        # junit.xml, which check_junit.py already reads.
+        phpunit_junit=''
+        if [ "${PHPUNIT_JUNIT}" == 'true' ]; then
+          phpunit_junit='--phpunit-junit'
         fi
         status=0
         docker run \
@@ -541,6 +558,7 @@ runs:
           --packages-source "${PACKAGES_SOURCE}" \
           --db "${DB}" \
           $dump_db \
+          $phpunit_junit \
           --run "${STAGE}" \
           $DEPENDENCIES || status=$?
         # composer-test: surface phpcs findings as inline annotations. phpcs has
@@ -560,14 +578,15 @@ runs:
         exit "$status"
 
     - name: Make Quibble logs readable
-      if: always() && inputs.upload-logs == 'true'
+      if: always() && (inputs.upload-logs == 'true' || inputs.phpunit-junit == 'true')
       shell: bash
       env:
         BASE_DIR: ${{ steps.setup.outputs.dir }}
       run: |
         # Quibble runs in Docker as root, so some logs land root-owned and
-        # unreadable by the runner user, which fails the upload step. Make the
-        # log tree readable first. Not guarded on `db`: mysql-error.log is only
+        # unreadable by the runner user, which fails the upload step and hides
+        # the JUnit reports from whatever reads them. Make the log tree readable
+        # first. Not guarded on `db`: mysql-error.log is only
         # the known case, the ownership comes from the container rather than
         # from any one backend, and a chmod of a log tree costs nothing.
         if [ -d "$BASE_DIR/log" ]; then

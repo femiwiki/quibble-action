@@ -148,6 +148,32 @@ would otherwise analyse a tree missing the dev dependencies its config expects.
 
 [mediawiki/vendor]: https://gerrit.wikimedia.org/g/mediawiki/vendor
 
+### Reporting test results
+
+Set `phpunit-junit` to have the PHPUnit stages write JUnit reports into the log
+directory, and point a reporter at the `logs` output to turn them into a check
+run with the failures annotated on the offending lines:
+
+```yaml
+      - id: quibble
+        uses: femiwiki/quibble-action@dc8d9ec9d6c86ba9805a77736c68f974d250aa8f # v1.0.0
+        with:
+          stage: phpunit
+          phpunit-junit: true
+```
+
+Then hand `${{ steps.quibble.outputs.logs }}/junit-*.xml` to whichever JUnit
+reporter action your workflow uses, marked `if: always()` — the run worth
+reporting on is exactly the run that failed, and a reporting step without it
+never runs. Each stage writes its own file (`junit-unit.xml`,
+`junit-dbless.xml`, `junit-db.xml`, `junit-standalone.xml`), so a glob is the
+way to pick them up. With `upload-logs: true` they are also in the artifact.
+
+This does not apply to `stage: coverage`, which drives PHPUnit through a
+MediaWiki helper command rather than a Quibble stage. That run writes its own
+`junit.xml` into the same directory whatever this input is set to, and the
+action already reads it to decide whether the stage passed.
+
 ### Defining dependencies
 
 Dependency extensions and skins are resolved from the **first** of these sources
@@ -304,6 +330,7 @@ older PHP, such as when testing an older MediaWiki branch:
 | `dump-db` | `false` | Dump the database into the log directory before shutdown (`mysql` only, needs `upload-logs`). See [Choosing a database backend](#choosing-a-database-backend). |
 | `project-path` | `.` | Path to the extension or skin under test, relative to the workspace. Set it when the action is checked out at the workspace root (so it can be used as `uses: ./`) and the project is in a subdirectory. See [Testing from the same repository](#testing-from-the-same-repository). |
 | `packages-source` | `composer` | Where core's PHP dependencies come from: `composer` (resolve with `composer update`) or `vendor` (the pinned mediawiki/vendor set). See [Choosing where PHP dependencies come from](#choosing-where-php-dependencies-come-from). |
+| `phpunit-junit` | `false` | Write JUnit reports for the PHPUnit stages into the log directory. See [Reporting test results](#reporting-test-results). |
 | `dependencies` | (none) | Whitespace/comma separated dependency extensions/skins. Takes priority over the `requires` clause and phan config. See [Defining dependencies](#defining-dependencies). |
 | `exclude-dependencies` | (none) | Space-separated list of dependency names to skip. |
 | `cache-key` | `true` | Mixed into every cache key; change it to bust the caches. |
