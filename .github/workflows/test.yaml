@@ -34,12 +34,20 @@ jobs:
           ref: REL1_46
           path: project
           persist-credentials: false
-      - uses: ./
+      - id: quibble
+        uses: ./
         with:
           stage: phpunit-unit
           mediawiki-version: REL1_46
           project-path: project
           upload-logs: true
+          dump-db: true
+      # dump-db is only observable through the log directory, so assert the
+      # dump is there and not empty.
+      - name: Assert the database was dumped
+        env:
+          LOG_DIR: ${{ runner.temp }}/log
+        run: test -s "$LOG_DIR/mysqldump.sql"
 
   quibble-sqlite:
     name: phpunit-unit on BoilerPlate (sqlite)
