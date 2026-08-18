@@ -93,6 +93,8 @@ inputs:
 outputs:
   coverage:
     value: ${{ steps.setup.outputs.dir }}/cover
+  logs:
+    value: ${{ steps.setup.outputs.dir }}/log
 runs:
   using: composite
   steps:

@@ -322,6 +322,7 @@ older PHP, such as when testing an older MediaWiki branch:
 | Name | Description |
 | --- | --- |
 | `coverage` | Path to the generated coverage directory (`$RUNNER_TEMP/cover`). |
+| `logs` | Path to Quibble's log directory (`$RUNNER_TEMP/log`), which holds Quibble's own logs and the `dump-db` database dump. Populated whatever the stage; `upload-logs` uploads the same directory as an artifact. |
 
 ## Requirements
 

@@ -46,7 +46,7 @@ jobs:
       # dump is there and not empty.
       - name: Assert the database was dumped
         env:
-          LOG_DIR: ${{ runner.temp }}/log
+          LOG_DIR: ${{ steps.quibble.outputs.logs }}
         run: test -s "$LOG_DIR/mysqldump.sql"
 
   quibble-sqlite:
