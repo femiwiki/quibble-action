@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.1.1](https://github.com/femiwiki/quibble-action/compare/v2.1.0...v2.1.1) (2026-08-19)
+
+
+### Bug Fixes
+
+* let exclude-dependencies exclude every dependency ([#84](https://github.com/femiwiki/quibble-action/issues/84)) ([202e468](https://github.com/femiwiki/quibble-action/commit/202e4682d4f13dd80685a1d09f6056ec003ad73b))
+* retry the project composer install ([#78](https://github.com/femiwiki/quibble-action/issues/78)) ([cb72b82](https://github.com/femiwiki/quibble-action/commit/cb72b82a2fd94e3807bd2157640009377b24faaa))
+* run the coverage stage for skins with mwext-phpunit-coverage ([#79](https://github.com/femiwiki/quibble-action/issues/79)) ([5a110f1](https://github.com/femiwiki/quibble-action/commit/5a110f1bc1ff2e2c139997d9687d55fe7832b854))
+* skip a dependency the workspace already has ([#85](https://github.com/femiwiki/quibble-action/issues/85)) ([b625dab](https://github.com/femiwiki/quibble-action/commit/b625dabc835f2722aaea49e547aa0c0aed3640ff))
+
 ## [2.1.0](https://github.com/femiwiki/quibble-action/compare/v2.0.2...v2.1.0) (2026-08-18)
 
 
