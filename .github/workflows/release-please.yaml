@@ -1,4 +1,23 @@
 ---
+# The pull request this opens carries no status checks at all. It is created
+# with GITHUB_TOKEN, and GitHub raises no workflow-triggering events for what
+# that token does, so neither Linter nor Test nor semantic-pull-request ever
+# runs on release-please--branches--main. semantic-pull-request being one of
+# main's required contexts, the release PR shows as blocked on a check that
+# cannot report rather than one that failed.
+#
+# Merging it anyway is the intended path. Its title and body are generated from
+# conventional commits that were already reviewed on main, and its diff is only
+# the version bump in .release-please-manifest.json and the CHANGELOG entry, so
+# there is nothing left for CI to say about it. Read the diff and merge; when
+# 2.1.0 was released the merge went through with the check still missing.
+# Pressing "Update branch" first is the alternative, since that push comes from
+# a user and does trigger the workflows.
+#
+# Handing this action a PAT or a GitHub App token would make its PR behave like
+# any other, checks and all. That is a trade rather than an oversight: it buys
+# CI on a diff of two generated files, and costs a long-lived token to store,
+# scope and rotate. Not worth it while the diff stays this small.
 name: Release Please
 on:
   push:
