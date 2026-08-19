@@ -223,14 +223,11 @@ jobs:
           mediawiki-version: master
           project-path: project
           # MinervaNeue declares no requires, so dependencies come from its
-          # phan config: Vector and MobileFrontend. Vector has to go, because
-          # the action clones it into src/skins/Vector for every run and the
-          # dependency loop then fails on the directory already being there
-          # (#81). MobileFrontend is a phan-time dependency that none of the
-          # 9 phpunit tests reference, so cloning and enabling it would only
-          # make the job slower. Excluding both empties the dependency list,
-          # which is the case the exclusion loop used to die on.
-          exclude-dependencies: Vector MobileFrontend
+          # phan config: Vector and MobileFrontend. Vector is left in on
+          # purpose, so this job covers a resolved dependency the action has
+          # already cloned itself. MobileFrontend is excluded because none of
+          # the 9 phpunit tests reference it.
+          exclude-dependencies: MobileFrontend
       - name: Assert a coverage report was produced
         env:
           COVER_DIR: ${{ steps.quibble.outputs.coverage }}

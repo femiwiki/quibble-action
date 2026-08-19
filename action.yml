@@ -337,7 +337,14 @@ runs:
             git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "$(repo_url mediawiki/vendor)" src/vendor
           fi
           for dep in $DEPENDENCIES; do
-            if [ "$dep" = 'mediawiki/extensions/Wikibase' ]; then
+            if [ -d src/"$(echo $dep | cut -d'/' -f2,3)" ]; then
+              # Already there: Vector, cloned for every run above and also
+              # nameable by a project's requires clause or phan config, or a
+              # leftover from a partially restored cache. git clone fails on a
+              # non-empty destination, which took the whole job down before any
+              # stage ran.
+              echo "Skipping ${dep}, already present."
+            elif [ "$dep" = 'mediawiki/extensions/Wikibase' ]; then
               git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "$(repo_url "$dep")" src/"$(echo $dep | cut -d'/' -f2,3)"
 
               cd src/"$(echo $dep | cut -d'/' -f2,3)"
