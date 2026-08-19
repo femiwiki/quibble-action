@@ -1,4 +1,8 @@
 ---
+# This never runs on the release-please pull request, which is created with
+# GITHUB_TOKEN and so raises no events that trigger a workflow. As a required
+# check on main it therefore sits permanently missing there rather than
+# failing. See the note in release-please.yaml for why that is left alone.
 name: Semantic Pull Request
 on:
   pull_request_target: # zizmor: ignore[dangerous-triggers]
