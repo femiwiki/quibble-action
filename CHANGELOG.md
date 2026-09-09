@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.2](https://github.com/femiwiki/quibble-action/compare/v2.1.1...v2.1.2) (2026-09-09)
+
+
+### Bug Fixes
+
+* clone a dependency whose directory core left empty ([#93](https://github.com/femiwiki/quibble-action/issues/93)) ([ae27bb4](https://github.com/femiwiki/quibble-action/commit/ae27bb4ceed4c3607980dd7b94c3f361d75d0d2f))
+
 ## [2.1.1](https://github.com/femiwiki/quibble-action/compare/v2.1.0...v2.1.1) (2026-08-26)
 
 
