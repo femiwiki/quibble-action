@@ -337,12 +337,19 @@ runs:
             git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "$(repo_url mediawiki/vendor)" src/vendor
           fi
           for dep in $DEPENDENCIES; do
-            if [ -d src/"$(echo $dep | cut -d'/' -f2,3)" ]; then
+            if [ -n "$(find src/"$(echo $dep | cut -d'/' -f2,3)" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)" ]; then
               # Already there: Vector, cloned for every run above and also
               # nameable by a project's requires clause or phan config, or a
               # leftover from a partially restored cache. git clone fails on a
               # non-empty destination, which took the whole job down before any
               # stage ran.
+              #
+              # Holding something is the test, not existing. A release branch
+              # of core carries its bundled extensions and skins as submodules,
+              # so its clone leaves an empty directory for each one; read as
+              # present, the dependency was never cloned and the run went on
+              # without it. An empty destination is one git clone accepts --
+              # which is why the Vector clone above has always worked.
               echo "Skipping ${dep}, already present."
             elif [ "$dep" = 'mediawiki/extensions/Wikibase' ]; then
               git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "$(repo_url "$dep")" src/"$(echo $dep | cut -d'/' -f2,3)"
