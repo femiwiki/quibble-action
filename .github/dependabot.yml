@@ -15,3 +15,16 @@ updates:
     labels:
       - dependencies
       - github-actions
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+    groups:
+      lint:
+        patterns:
+          - "*"
+    labels:
+      - dependencies
