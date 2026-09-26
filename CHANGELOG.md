@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.1](https://github.com/femiwiki/quibble-action/compare/v2.3.0...v2.3.1) (2026-09-26)
+
+
+### Bug Fixes
+
+* let dependency-commits pin Vector too ([#107](https://github.com/femiwiki/quibble-action/issues/107)) ([144f1a1](https://github.com/femiwiki/quibble-action/commit/144f1a188db48c4bd46ae1b7cbe965dcc3b7adc0))
+
 ## [2.3.0](https://github.com/femiwiki/quibble-action/compare/v2.2.0...v2.3.0) (2026-09-26)
 
 
