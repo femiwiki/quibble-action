@@ -383,7 +383,7 @@ older PHP, such as when testing an older MediaWiki branch:
 | Name | Default | Description |
 | --- | --- | --- |
 | `mediawiki-version` | `REL1_45` | MediaWiki branch to test against, for example `master` or `REL1_43`. |
-| `git-source` | `github` | Where MediaWiki and the dependencies are cloned from: `github` (the official read-only mirrors, immune to Gerrit's CI rate limiting) or `gerrit` (gerrit.wikimedia.org). |
+| `git-source` | `github` | Where MediaWiki and the dependencies are cloned from: `github` (the official read-only mirrors, immune to Gerrit's CI rate limiting) or `gerrit` (gerrit.wikimedia.org). With `github`, a repository whose mirror lacks the branch, as with an end-of-life release that Gerrit keeps only as a tag, is cloned from Gerrit. |
 | `stage` | `all` | Stage to run, or a comma separated list of them. Any Quibble stage, or `phan` / `coverage`. See [Choosing a stage](#choosing-a-stage). |
 | `db` | `mysql` | Database backend MediaWiki is installed on: `mysql`, `sqlite` or `postgres`. See [Choosing a database backend](#choosing-a-database-backend). |
 | `dump-db` | `false` | Dump the database into the log directory before shutdown (`mysql` only, needs `upload-logs`). See [Choosing a database backend](#choosing-a-database-backend). |

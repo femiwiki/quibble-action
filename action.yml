@@ -45,8 +45,10 @@ inputs:
     description: >-
       Where MediaWiki and the dependency extensions/skins are cloned from:
       `github` for the official read-only mirrors (github.com/wikimedia/*), or
-      `gerrit` for gerrit.wikimedia.org. The mirrors carry the same branches
-      and are not subject to Gerrit's rate limiting of CI runners.
+      `gerrit` for gerrit.wikimedia.org. The mirrors are not subject to
+      Gerrit's rate limiting of CI runners. They carry branches but not tags,
+      so with `github` a repository whose mirror lacks the branch (an
+      end-of-life release, which Gerrit keeps as a tag) is cloned from Gerrit.
     default: github
   stage:
     description: >-
@@ -328,16 +330,33 @@ runs:
         # these clones fail intermittently. `git-source: gerrit` clones from
         # gerrit.wikimedia.org instead. A Gerrit path maps to a mirror name by
         # replacing slashes with dashes; mediawiki/core is the mediawiki mirror.
-        if [ "${GIT_SOURCE}" = 'gerrit' ]; then
-          core_url='https://gerrit.wikimedia.org/r/mediawiki/core'
-          repo_url() { echo "https://gerrit.wikimedia.org/r/$1"; }
-        else
-          core_url='https://github.com/wikimedia/mediawiki'
-          repo_url() { echo "https://github.com/wikimedia/$(echo "$1" | tr '/' '-')"; }
-        fi
+        #
+        # The mirrors carry branches only. When a release reaches end of life,
+        # Gerrit turns its branch into a tag of the same name (Echo's REL1_44,
+        # for instance), and the mirror loses the ref. A repository whose
+        # mirror has no such branch or tag is cloned from Gerrit instead;
+        # `git clone -b` takes a tag as well as a branch.
+        repo_url() {
+          if [ "${GIT_SOURCE}" = 'gerrit' ]; then
+            echo "https://gerrit.wikimedia.org/r/$1"
+            return
+          fi
+          local mirror
+          if [ "$1" = 'mediawiki/core' ]; then
+            mirror='https://github.com/wikimedia/mediawiki'
+          else
+            mirror="https://github.com/wikimedia/$(echo "$1" | tr '/' '-')"
+          fi
+          if git ls-remote --exit-code "$mirror" "refs/heads/${MEDIAWIKI_VERSION}" "refs/tags/${MEDIAWIKI_VERSION}" >/dev/null; then
+            echo "$mirror"
+          else
+            echo "::notice::$1 has no ${MEDIAWIKI_VERSION} on its GitHub mirror; cloning it from Gerrit." >&2
+            echo "https://gerrit.wikimedia.org/r/$1"
+          fi
+        }
         cd "$BASE_DIR"
         if [ ! -d src ]; then
-          git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "$core_url" src
+          git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "$(repo_url mediawiki/core)" src
           git clone --recurse-submodules -b "${MEDIAWIKI_VERSION}" --depth 1 "$(repo_url mediawiki/skins/Vector)" src/skins/Vector
           # packages-source: vendor installs core's dependencies from the
           # mediawiki/vendor repository, so that repository has to be in place.
