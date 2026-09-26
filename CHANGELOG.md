@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/femiwiki/quibble-action/compare/v2.1.2...v2.2.0) (2026-09-26)
+
+
+### Features
+
+* add a quibble-docker-tag input to pin the Quibble image tag ([#102](https://github.com/femiwiki/quibble-action/issues/102)) ([0823c13](https://github.com/femiwiki/quibble-action/commit/0823c135dfee31403f526343be17a937ace5e94c))
+
 ## [2.1.2](https://github.com/femiwiki/quibble-action/compare/v2.1.1...v2.1.2) (2026-09-09)
 
 
