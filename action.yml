@@ -100,6 +100,14 @@ inputs:
     default: ""
   exclude-dependencies:
     default: ""
+  dependency-commits:
+    description: >-
+      Whitespace/comma separated `Name=<commit>` pairs, e.g.
+      `Echo=7dcf8d9bf83c5bf25351e95b1d684f8628754e30`. Each named dependency
+      is fetched at that commit instead of the `mediawiki-version` branch.
+      Names take the same forms as `dependencies`. For end-of-life releases,
+      whose branches the GitHub mirrors no longer carry; see the README.
+    default: ""
   cache-key:
     default: true
   upload-logs:
@@ -312,7 +320,7 @@ runs:
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.setup.outputs.dir }}/src
-        key: ${{ runner.os }}-${{ inputs.mediawiki-version }}-${{ hashFiles(format('{0}/extension.json', inputs.project-path), format('{0}/skin.json', inputs.project-path), format('{0}/.phan/config.php', inputs.project-path)) }}-${{ inputs.dependencies }}-${{ inputs.exclude-dependencies }}-${{ inputs.packages-source }}-${{ inputs.cache-key }}
+        key: ${{ runner.os }}-${{ inputs.mediawiki-version }}-${{ hashFiles(format('{0}/extension.json', inputs.project-path), format('{0}/skin.json', inputs.project-path), format('{0}/.phan/config.php', inputs.project-path)) }}-${{ inputs.dependencies }}-${{ inputs.exclude-dependencies }}-${{ inputs.dependency-commits }}-${{ inputs.packages-source }}-${{ inputs.cache-key }}
 
     - shell: bash
       env:
@@ -321,6 +329,7 @@ runs:
         DEPENDENCIES: ${{ steps.deps.outputs.dependencies }}
         GIT_SOURCE: ${{ inputs.git-source }}
         PACKAGES_SOURCE: ${{ inputs.packages-source }}
+        DEPENDENCY_COMMITS: ${{ inputs.dependency-commits }}
       run: |
         # Download MediaWiki and extensions. By default from the official GitHub
         # mirrors (github.com/wikimedia/*, same refs as Gerrit): Gerrit
@@ -335,6 +344,44 @@ runs:
           core_url='https://github.com/wikimedia/mediawiki'
           repo_url() { echo "https://github.com/wikimedia/$(echo "$1" | tr '/' '-')"; }
         fi
+        # The commit dependency-commits pins for a Gerrit path, if any. Names
+        # are normalised like resolve_dependencies.py does.
+        dep_commit() {
+          local pair name
+          for pair in ${DEPENDENCY_COMMITS//,/ }; do
+            name="${pair%%=*}"
+            name="${name#/}"; name="${name%/}"
+            case "$name" in
+              mediawiki/*) ;;
+              */*) name="mediawiki/$name" ;;
+              *) name="mediawiki/extensions/$name" ;;
+            esac
+            if [ "$name" = "$1" ]; then
+              echo "${pair#*=}"
+              return
+            fi
+          done
+        }
+        # Clone a dependency into $2, at its pinned commit or else at the
+        # mediawiki-version branch; $3 is "recurse" to take its submodules too.
+        # The mirrors drop a release's branches when it reaches end of life,
+        # so a failed branch clone points at dependency-commits.
+        clone_dep() {
+          local url commit
+          url="$(repo_url "$1")"
+          commit="$(dep_commit "$1")"
+          if [ -n "$commit" ]; then
+            git init -q "$2"
+            git -C "$2" fetch -q --depth 1 "$url" "$commit"
+            git -C "$2" -c advice.detachedHead=false checkout -q FETCH_HEAD
+            if [ "${3:-}" = recurse ]; then
+              git -C "$2" submodule update --init --recursive --depth 1
+            fi
+          elif ! git clone ${3:+--recurse-submodules} -b "${MEDIAWIKI_VERSION}" --depth 1 "$url" "$2"; then
+            echo "::error::Could not clone $1 at ${MEDIAWIKI_VERSION}. If the release is end of life, pin a commit with dependency-commits (see the README)."
+            return 1
+          fi
+        }
         cd "$BASE_DIR"
         if [ ! -d src ]; then
           git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "$core_url" src
@@ -362,7 +409,7 @@ runs:
               # which is why the Vector clone above has always worked.
               echo "Skipping ${dep}, already present."
             elif [ "$dep" = 'mediawiki/extensions/Wikibase' ]; then
-              git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "$(repo_url "$dep")" src/"$(echo $dep | cut -d'/' -f2,3)"
+              clone_dep "$dep" src/"$(echo $dep | cut -d'/' -f2,3)"
 
               cd src/"$(echo $dep | cut -d'/' -f2,3)"
               # Repoint dead phabricator submodule URLs at their github
@@ -377,7 +424,7 @@ runs:
               git submodule update --init
               cd -
             elif [ "$dep" = 'mediawiki/extensions/WikibaseLexeme' ]; then
-              git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "$(repo_url "$dep")" src/"$(echo $dep | cut -d'/' -f2,3)"
+              clone_dep "$dep" src/"$(echo $dep | cut -d'/' -f2,3)"
 
               cd src/"$(echo $dep | cut -d'/' -f2,3)"
               # Repoint the dead phabricator submodule URL at its github
@@ -389,7 +436,7 @@ runs:
               git submodule update --init
               cd -
             else
-              git clone --recurse-submodules -b "${MEDIAWIKI_VERSION}" --depth 1 "$(repo_url "$dep")" src/"$(echo $dep | cut -d'/' -f2,3)"
+              clone_dep "$dep" src/"$(echo $dep | cut -d'/' -f2,3)" recurse
             fi
           done
         fi
