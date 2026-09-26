@@ -105,8 +105,9 @@ inputs:
       Whitespace/comma separated `Name=<commit>` pairs, e.g.
       `Echo=7dcf8d9bf83c5bf25351e95b1d684f8628754e30`. Each named dependency
       is fetched at that commit instead of the `mediawiki-version` branch.
-      Names take the same forms as `dependencies`. For end-of-life releases,
-      whose branches the GitHub mirrors no longer carry; see the README.
+      Names take the same forms as `dependencies`, and `skins/Vector`, which
+      is always cloned, can be pinned too. For end-of-life releases, whose
+      branches the GitHub mirrors no longer carry; see the README.
     default: ""
   cache-key:
     default: true
@@ -385,7 +386,7 @@ runs:
         cd "$BASE_DIR"
         if [ ! -d src ]; then
           git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "$core_url" src
-          git clone --recurse-submodules -b "${MEDIAWIKI_VERSION}" --depth 1 "$(repo_url mediawiki/skins/Vector)" src/skins/Vector
+          clone_dep mediawiki/skins/Vector src/skins/Vector recurse
           # packages-source: vendor installs core's dependencies from the
           # mediawiki/vendor repository, so that repository has to be in place.
           # Quibble adds it to the repositories it clones itself, but --skip-zuul
