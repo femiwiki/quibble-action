@@ -322,6 +322,13 @@ those two knobs. Any image can also be pinned explicitly with its
 | `coverage` | `quibble-coverage` | `coverage-docker-image` |
 | `phan` | `mediawiki-phan-testrun` | `phan-docker-image` |
 
+The `<tag>` is the newest one in the registry. `quibble-docker-tag` pins the
+Quibble image to an older tag, for when a new image breaks a stage that the
+project cannot fix itself. For example, Quibble images from `1.21.0-s3` ship
+Node 26, on which the browser download in WebdriverIO stops midway without an
+error ([puppeteer/puppeteer#14957](https://github.com/puppeteer/puppeteer/issues/14957)),
+so `selenium` needs `1.21.0-s2` there until that is fixed.
+
 `coverage` is not derived from `debian`/`php-version`: it uses the single
 `quibble-coverage` image (pcov-based, the one Wikimedia CI uses), which replaced
 the old per-PHP coverage images.
@@ -394,6 +401,7 @@ older PHP, such as when testing an older MediaWiki branch:
 | `debian` | derived | Debian base for the Quibble image (`bookworm`, or `buster` for REL1_43/REL1_44 non-phan stages). See [Docker images](#docker-images). |
 | `php-version` | derived | PHP version for the images and the host. Branch minimum (for `phan`, the image that installs its deps; phan runs in `mediawiki-phan-testrun`). See [Docker images](#docker-images). |
 | `quibble-docker-image` | (derived) | Override; `quibble-<debian>-php<version>` when empty. |
+| `quibble-docker-tag` | (newest) | Tag of the Quibble image; the newest tag in the registry when empty. See [Docker images](#docker-images). |
 | `coverage-docker-image` | `quibble-coverage` | Override for the single pcov-based coverage image. |
 | `phan-docker-image` | `mediawiki-phan-testrun` | Override for the `phan` run image; `mediawiki-phan-testrun` when empty. |
 
