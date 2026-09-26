@@ -14,6 +14,11 @@ inputs:
       Override for the Quibble Docker image. When empty, it is derived as
       `quibble-<debian>-php<version>` from `debian` and `php-version`.
     default: ""
+  quibble-docker-tag:
+    description: >-
+      Tag of the Quibble Docker image. When empty, the newest tag in the
+      registry is used.
+    default: ""
   coverage-docker-image:
     description: >-
       Override for the coverage Docker image. Defaults to `quibble-coverage`,
@@ -182,6 +187,7 @@ runs:
         PHP_VERSION: ${{ inputs.php-version }}
         MEDIAWIKI_VERSION: ${{ inputs.mediawiki-version }}
         QUIBBLE_IMAGE_OVERRIDE: ${{ inputs.quibble-docker-image }}
+        QUIBBLE_TAG_OVERRIDE: ${{ inputs.quibble-docker-tag }}
         COVERAGE_IMAGE_OVERRIDE: ${{ inputs.coverage-docker-image }}
         PHAN_IMAGE_OVERRIDE: ${{ inputs.phan-docker-image }}
         STAGE: ${{ inputs.stage }}
@@ -217,9 +223,13 @@ runs:
         echo "quibble_image=${QUIBBLE_DOCKER_IMAGE}" >> "$GITHUB_OUTPUT"
         echo "coverage_image=${COVERAGE_DOCKER_IMAGE}" >> "$GITHUB_OUTPUT"
         echo "phan_image=${PHAN_DOCKER_IMAGE}" >> "$GITHUB_OUTPUT"
-        QUIBBLE_DOCKER_LATEST_TAG="$(curl -sL "https://${DOCKER_REGISTRY}/v2/${DOCKER_ORG}/${QUIBBLE_DOCKER_IMAGE}/tags/list" |
-          python3 -c 'import json;print("\n".join(json.loads(input())["tags"]))' |
-          grep -v latest | sort -Vr | head -1)"
+        if [ -n "${QUIBBLE_TAG_OVERRIDE}" ]; then
+          QUIBBLE_DOCKER_LATEST_TAG="${QUIBBLE_TAG_OVERRIDE}"
+        else
+          QUIBBLE_DOCKER_LATEST_TAG="$(curl -sL "https://${DOCKER_REGISTRY}/v2/${DOCKER_ORG}/${QUIBBLE_DOCKER_IMAGE}/tags/list" |
+            python3 -c 'import json;print("\n".join(json.loads(input())["tags"]))' |
+            grep -v latest | sort -Vr | head -1)"
+        fi
         echo "quibble=${QUIBBLE_DOCKER_LATEST_TAG}" >> "$GITHUB_OUTPUT"
         if [ "${STAGE}" == 'phan' ]; then
           echo "phan=$(curl -sL "https://${DOCKER_REGISTRY}/v2/${DOCKER_ORG}/${PHAN_DOCKER_IMAGE}/tags/list" |
