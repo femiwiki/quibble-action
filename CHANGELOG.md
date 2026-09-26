@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/femiwiki/quibble-action/compare/v2.2.0...v2.3.0) (2026-09-26)
+
+
+### Features
+
+* add a dependency-commits input for end-of-life releases ([#105](https://github.com/femiwiki/quibble-action/issues/105)) ([470f390](https://github.com/femiwiki/quibble-action/commit/470f390ec4276395b3181498d67340ec5a320fd3))
+
 ## [2.2.0](https://github.com/femiwiki/quibble-action/compare/v2.1.2...v2.2.0) (2026-09-26)
 
 
