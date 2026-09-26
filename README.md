@@ -249,6 +249,28 @@ when it is doing the cloning, and this action clones for itself so that it can
 use the GitHub mirrors and cache the result. `resolve_dependencies.py` explains
 the trade in full.
 
+### Testing an end-of-life release
+
+When a MediaWiki release reaches end of life, Gerrit turns the extensions'
+`REL1_xx` branches into tags, and the GitHub mirrors, which carry branches only,
+lose them. The clone of such a dependency then fails. Cloning from Gerrit
+instead (`git-source: gerrit`) runs into its rate limiting of CI runners, so
+pin the dependency to the commit the tag points at; the mirror still serves it
+by hash:
+
+```yaml
+with:
+  mediawiki-version: REL1_44
+  dependency-commits: Echo=7dcf8d9bf83c5bf25351e95b1d684f8628754e30
+```
+
+Find the commit once, by hand, with `git ls-remote` against Gerrit (`^{}` gives
+the commit of an annotated tag):
+
+```sh
+git ls-remote https://gerrit.wikimedia.org/r/mediawiki/extensions/Echo 'refs/tags/REL1_44^{}'
+```
+
 ### Testing several MediaWiki versions
 
 ```yaml
@@ -383,7 +405,7 @@ older PHP, such as when testing an older MediaWiki branch:
 | Name | Default | Description |
 | --- | --- | --- |
 | `mediawiki-version` | `REL1_45` | MediaWiki branch to test against, for example `master` or `REL1_43`. |
-| `git-source` | `github` | Where MediaWiki and the dependencies are cloned from: `github` (the official read-only mirrors, immune to Gerrit's CI rate limiting) or `gerrit` (gerrit.wikimedia.org). With `github`, a repository whose mirror lacks the branch, as with an end-of-life release that Gerrit keeps only as a tag, is cloned from Gerrit. |
+| `git-source` | `github` | Where MediaWiki and the dependencies are cloned from: `github` (the official read-only mirrors, immune to Gerrit's CI rate limiting) or `gerrit` (gerrit.wikimedia.org). |
 | `stage` | `all` | Stage to run, or a comma separated list of them. Any Quibble stage, or `phan` / `coverage`. See [Choosing a stage](#choosing-a-stage). |
 | `db` | `mysql` | Database backend MediaWiki is installed on: `mysql`, `sqlite` or `postgres`. See [Choosing a database backend](#choosing-a-database-backend). |
 | `dump-db` | `false` | Dump the database into the log directory before shutdown (`mysql` only, needs `upload-logs`). See [Choosing a database backend](#choosing-a-database-backend). |
@@ -393,6 +415,7 @@ older PHP, such as when testing an older MediaWiki branch:
 | `skip-npm-install` | `false` | Skip the standalone `npm install`. For `coverage`, which runs no Node tests. See [Skipping the npm install](#skipping-the-npm-install). |
 | `dependencies` | (none) | Whitespace/comma separated dependency extensions/skins. Takes priority over the `requires` clause and phan config. See [Defining dependencies](#defining-dependencies). |
 | `exclude-dependencies` | (none) | Space-separated list of dependency names to skip. |
+| `dependency-commits` | (none) | `Name=<commit>` pairs; those dependencies are fetched at that commit instead of the branch. See [Testing an end-of-life release](#testing-an-end-of-life-release). |
 | `cache-key` | `true` | Mixed into every cache key; change it to bust the caches. |
 | `upload-logs` | `false` | Upload Quibble's logs as an artifact (opt-in, captured on failure too). Mind storage cost, retention, and that the artifact is downloadable by anyone who can view the run. |
 | `log-artifact-name` | `quibble-logs` | Name for the uploaded Quibble logs artifact. |
