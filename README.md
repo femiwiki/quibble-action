@@ -261,8 +261,12 @@ by hash:
 ```yaml
 with:
   mediawiki-version: REL1_44
-  dependency-commits: Echo=7dcf8d9bf83c5bf25351e95b1d684f8628754e30
+  dependency-commits: >-
+    Echo=7dcf8d9bf83c5bf25351e95b1d684f8628754e30
+    skins/Vector=d16380209683c9d2ae5d9cb111c036e3e2b5ef62
 ```
+
+Vector is cloned on every run, so it may need pinning too.
 
 Find the commit once, by hand, with `git ls-remote` against Gerrit (`^{}` gives
 the commit of an annotated tag):
