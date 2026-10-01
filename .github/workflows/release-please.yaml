@@ -1,7 +1,7 @@
 ---
 # The pull request this opens carries no status checks at all. It is created
 # with GITHUB_TOKEN, and GitHub raises no workflow-triggering events for what
-# that token does, so neither Linter nor Test nor semantic-pull-request ever
+# that token does, so neither Required nor semantic-pull-request ever
 # runs on release-please--branches--main. semantic-pull-request being one of
 # main's required contexts, the release PR shows as blocked on a check that
 # cannot report rather than one that failed.
