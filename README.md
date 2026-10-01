@@ -2,8 +2,7 @@
 
 ⏯️ Quibble is for setting up a MediaWiki instance and running various tests against it.
 
-[![Linter](https://github.com/femiwiki/quibble-action/actions/workflows/linter.yaml/badge.svg)](https://github.com/femiwiki/quibble-action/actions/workflows/linter.yaml)
-[![zizmor](https://github.com/femiwiki/quibble-action/actions/workflows/zizmor.yaml/badge.svg)](https://github.com/femiwiki/quibble-action/actions/workflows/zizmor.yaml)
+[![Required](https://github.com/femiwiki/quibble-action/actions/workflows/required.yaml/badge.svg)](https://github.com/femiwiki/quibble-action/actions/workflows/required.yaml)
 
 A GitHub composite action that runs [Quibble] against a MediaWiki extension or
 skin. It mirrors what Wikimedia CI does on Gerrit, but on GitHub Actions: it
