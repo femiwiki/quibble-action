@@ -373,7 +373,7 @@ When `php-version` is empty it is derived from `mediawiki-version`, with two
 policies:
 
 - **Most stages**, including `phan`, use each branch's **minimum** PHP, to test
-  the floor: `8.1` for REL1_43/REL1_44, `8.2` for REL1_45, `8.3` for REL1_46 and
+  the floor: `8.1` for REL1_43, `8.2` for REL1_45, `8.3` for REL1_46 and
   master, `8.4` otherwise. For `phan` this only selects the Quibble image that
   installs its dependencies (phan itself runs in `mediawiki-phan-testrun`); the
   minimum already clears phan's floor (phan 6 needs PHP 8.1+, phan 5 less), so it
@@ -386,8 +386,8 @@ current; a branch not listed falls back to `8.4`. Set `php-version` explicitly
 to override.
 
 The `debian` base is also derived from `mediawiki-version`: `buster` for
-REL1_43/REL1_44 (their Selenium tests need that image's older Chromium, which
-newer Chromium aborts on for those branches' test URLs) and `bookworm`
+REL1_43 (its Selenium tests need that image's older Chromium, since newer
+Chromium aborts on that branch's test URLs) and `bookworm`
 otherwise. The `phan` and `api-testing` stages always use `bookworm`. Set
 `debian` explicitly to override.
 
@@ -424,7 +424,7 @@ older PHP, such as when testing an older MediaWiki branch:
 | `log-artifact-name` | `quibble-logs` | Name for the uploaded Quibble logs artifact. |
 | `docker-registry` | `docker-registry.wikimedia.org` | Registry that hosts the images. |
 | `docker-org` | `releng` | Registry organization. |
-| `debian` | derived | Debian base for the Quibble image (`bookworm`, or `buster` for REL1_43/REL1_44 non-phan stages). See [Docker images](#docker-images). |
+| `debian` | derived | Debian base for the Quibble image (`bookworm`, or `buster` for REL1_43 non-phan stages). See [Docker images](#docker-images). |
 | `php-version` | derived | PHP version for the images and the host. Branch minimum (for `phan`, the image that installs its deps; phan runs in `mediawiki-phan-testrun`). See [Docker images](#docker-images). |
 | `quibble-docker-image` | (derived) | Override; `quibble-<debian>-php<version>` when empty. |
 | `quibble-docker-tag` | (newest) | Tag of the Quibble image; the newest tag in the registry when empty. See [Docker images](#docker-images). |

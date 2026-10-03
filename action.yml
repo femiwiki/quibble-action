@@ -207,7 +207,7 @@ runs:
           php_version='8.3'
         else
           case "${MEDIAWIKI_VERSION}" in
-            REL1_43 | REL1_44) php_version='8.1' ;;
+            REL1_43) php_version='8.1' ;;
             REL1_45) php_version='8.2' ;;
             REL1_46) php_version='8.3' ;;
             master) php_version='8.3' ;;
@@ -221,7 +221,7 @@ runs:
           debian='bookworm'
         else
           case "${MEDIAWIKI_VERSION}" in
-            REL1_43 | REL1_44) debian='buster' ;;
+            REL1_43) debian='buster' ;;
             *) debian='bookworm' ;;
           esac
         fi
