@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.0.0](https://github.com/femiwiki/quibble-action/compare/v2.3.1...v3.0.0) (2026-10-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* stop deriving PHP and Debian for REL1_44, end of life since 2026-07-31
+
+### Features
+
+* stop deriving PHP and Debian for REL1_44, end of life since 2026-07-31 ([06a6527](https://github.com/femiwiki/quibble-action/commit/06a652795c93243b9e6d8deb7a8d509a56486187))
+
+
+### Bug Fixes
+
+* run a skin's PHPUnit tests on MediaWiki 1.46 and later ([#116](https://github.com/femiwiki/quibble-action/issues/116)) ([d928cb0](https://github.com/femiwiki/quibble-action/commit/d928cb092e0b973f85550b30347d157cf6ff43a3))
+
 ## [2.3.1](https://github.com/femiwiki/quibble-action/compare/v2.3.0...v2.3.1) (2026-09-26)
 
 
