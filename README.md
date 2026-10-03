@@ -260,12 +260,17 @@ by hash:
 ```yaml
 with:
   mediawiki-version: REL1_44
+  php-version: '8.1'
+  debian: buster
   dependency-commits: >-
     Echo=7dcf8d9bf83c5bf25351e95b1d684f8628754e30
     skins/Vector=d16380209683c9d2ae5d9cb111c036e3e2b5ef62
 ```
 
-Vector is cloned on every run, so it may need pinning too.
+Vector is cloned on every run, so it may need pinning too. An end-of-life
+release is dropped from the [PHP version](#php-version) table, so give
+`php-version` and `debian` as well; without them REL1_44 would run on PHP 8.4
+and bookworm.
 
 Find the commit once, by hand, with `git ls-remote` against Gerrit (`^{}` gives
 the commit of an annotated tag):
