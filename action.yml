@@ -678,6 +678,14 @@ runs:
         if [ "${SKIP_NPM_INSTALL}" == 'true' ]; then
           skip_npm_install='--skip-npm-install'
         fi
+        # Quibble runs a skin's PHPUnit tests as the `skins` suite, which
+        # MediaWiki 1.46 dropped: its phpunit.xml.template puts skins in the
+        # `extensions` suite, and PHPUnit exits 0 on "No tests executed!".
+        phpunit_testsuite=''
+        if [ "${TYPE}" == 'skin' ] &&
+          ! grep -qs '<testsuite name="skins"' src/phpunit.xml.dist src/phpunit.xml.template; then
+          phpunit_testsuite='--phpunit-testsuite=extensions'
+        fi
         status=0
         docker run \
           --entrypoint quibble-with-supervisord \
@@ -691,6 +699,7 @@ runs:
           --db "${DB}" \
           $dump_db \
           $phpunit_junit \
+          $phpunit_testsuite \
           $skip_npm_install \
           --run "${STAGE}" \
           $DEPENDENCIES || status=$?
