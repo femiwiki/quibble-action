@@ -1,23 +1,7 @@
 ---
-# The pull request this opens carries no status checks at all. It is created
-# with GITHUB_TOKEN, and GitHub raises no workflow-triggering events for what
-# that token does, so neither Required nor semantic-pull-request ever
-# runs on release-please--branches--main. semantic-pull-request being one of
-# main's required contexts, the release PR shows as blocked on a check that
-# cannot report rather than one that failed.
-#
-# Merging it anyway is the intended path. Its title and body are generated from
-# conventional commits that were already reviewed on main, and its diff is only
-# the version bump in .release-please-manifest.json and the CHANGELOG entry, so
-# there is nothing left for CI to say about it. Read the diff and merge; when
-# 2.1.0 was released the merge went through with the check still missing.
-# Pressing "Update branch" first is the alternative, since that push comes from
-# a user and does trigger the workflows.
-#
-# Handing this action a PAT or a GitHub App token would make its PR behave like
-# any other, checks and all. That is a trade rather than an oversight: it buys
-# CI on a diff of two generated files, and costs a long-lived token to store,
-# scope and rotate. Not worth it while the diff stays this small.
+# GitHub starts no workflows for a pull request GITHUB_TOKEN opens, so the
+# release pull request is opened as the femiwiki-pat-owner app to get its
+# checks like any other.
 name: Release Please
 on:
   push:
@@ -27,8 +11,15 @@ permissions: {}
 jobs:
   release-please:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
+    permissions: {}
     steps:
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ vars.PAT_APPLICATION_CLIENT_ID }}
+          private-key: ${{ secrets.PAT_APPLICATION_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ steps.app-token.outputs.token }}
