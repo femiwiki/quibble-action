@@ -363,6 +363,19 @@ runs:
             fi
           done
         }
+        # Point the Gerrit submodules of the clone in $1 at git-source too,
+        # since Gerrit answers runners with 403. Run before submodule update.
+        mirror_submodules() {
+          local key url path
+          [ -f "$1/.gitmodules" ] || return 0
+          git -C "$1" config -f .gitmodules --get-regexp '^submodule\..*\.url$' | while read -r key url; do
+            case "$url" in
+              https://gerrit.wikimedia.org/r/*)
+                path="${url#https://gerrit.wikimedia.org/r/}"
+                git -C "$1" config -f .gitmodules "$key" "$(repo_url "${path%.git}")" ;;
+            esac
+          done
+        }
         # Clone a dependency into $2, at its pinned commit or else at the
         # mediawiki-version branch; $3 is "recurse" to take its submodules too.
         # The mirrors drop a release's branches when it reaches end of life,
@@ -376,9 +389,15 @@ runs:
             git -C "$2" fetch -q --depth 1 "$url" "$commit"
             git -C "$2" -c advice.detachedHead=false checkout -q FETCH_HEAD
             if [ "${3:-}" = recurse ]; then
+              mirror_submodules "$2"
               git -C "$2" submodule update --init --recursive --depth 1
             fi
-          elif ! git clone ${3:+--recurse-submodules} -b "${MEDIAWIKI_VERSION}" --depth 1 "$url" "$2"; then
+          elif git clone -b "${MEDIAWIKI_VERSION}" --depth 1 "$url" "$2"; then
+            if [ "${3:-}" = recurse ]; then
+              mirror_submodules "$2"
+              git -C "$2" submodule update --init --recursive
+            fi
+          else
             echo "::error::Could not clone $1 at ${MEDIAWIKI_VERSION}. If the release is end of life, pin a commit with dependency-commits (see the README)."
             return 1
           fi
@@ -422,13 +441,7 @@ runs:
                 -e 's#https://phabricator.wikimedia.org/source/datavalues-javascript.git#https://github.com/wmde/DataValuesJavaScript.git#' \
                 -e 's#https://phabricator.wikimedia.org/source/wikibase-data-model.git#https://github.com/wmde/WikibaseDataModelJavaScript.git#' \
                 .gitmodules
-              # Gerrit submodules come from git-source too: Gerrit answers runners with 403
-              git config -f .gitmodules --get-regexp '^submodule\..*\.url$' | while read -r key url; do
-                case "$url" in
-                  https://gerrit.wikimedia.org/r/*)
-                    git config -f .gitmodules "$key" "$(repo_url "${url#https://gerrit.wikimedia.org/r/}")" ;;
-                esac
-              done
+              mirror_submodules .
               git submodule update --init
               cd -
             elif [ "$dep" = 'mediawiki/extensions/WikibaseLexeme' ]; then
@@ -441,6 +454,7 @@ runs:
               sed -i \
                 -e 's#https://phabricator.wikimedia.org/diffusion/NLSP/new-lexeme-special-page.git#https://github.com/wmde/new-lexeme-special-page.git#' \
                 .gitmodules
+              mirror_submodules .
               git submodule update --init
               cd -
             else
