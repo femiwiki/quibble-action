@@ -163,9 +163,9 @@ jobs:
           mediawiki-version: REL1_46
           project-path: project
 
-  # Wikibase's submodules include Gerrit ones, which have to come from the mirrors.
+  # Both carry Gerrit submodules, which have to come from the mirrors.
   wikibase:
-    name: composer-test on BoilerPlate with Wikibase
+    name: composer-test on BoilerPlate with Wikibase and VisualEditor
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -182,7 +182,7 @@ jobs:
           stage: composer-test
           mediawiki-version: REL1_46
           project-path: project
-          dependencies: Wikibase
+          dependencies: Wikibase VisualEditor
 
   coverage:
     name: coverage on BoilerPlate
