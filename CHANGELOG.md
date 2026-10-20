@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.2](https://github.com/femiwiki/quibble-action/compare/v3.0.1...v3.0.2) (2026-10-20)
+
+
+### Bug Fixes
+
+* Clone every dependency's Gerrit submodules from git-source ([#136](https://github.com/femiwiki/quibble-action/issues/136)) ([1e6ee18](https://github.com/femiwiki/quibble-action/commit/1e6ee188b5997e51b8c1af17e889713a8958bd32))
+
 ## [3.0.1](https://github.com/femiwiki/quibble-action/compare/v3.0.0...v3.0.1) (2026-10-20)
 
 
