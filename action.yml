@@ -17,7 +17,9 @@ inputs:
   quibble-docker-tag:
     description: >-
       Tag of the Quibble Docker image. When empty, the newest tag in the
-      registry is used.
+      registry is used, except for stages that run WebdriverIO (`selenium`
+      and `all`), which take the newest tag up to the last one shipping
+      Node 24; see the README "Docker images" section.
     default: ""
   coverage-docker-image:
     description: >-
@@ -235,9 +237,20 @@ runs:
         if [ -n "${QUIBBLE_TAG_OVERRIDE}" ]; then
           QUIBBLE_DOCKER_LATEST_TAG="${QUIBBLE_TAG_OVERRIDE}"
         else
+          # WebdriverIO cannot drive a browser on the Node 26 of 1.22.0-s4 and
+          # later (see the README), so the stages that run it stop at Node 24.
+          max_tag=''
+          case ",${STAGE// /}," in
+            *,selenium,* | *,all,*) max_tag='1.22.0-s3' ;;
+          esac
           QUIBBLE_DOCKER_LATEST_TAG="$(curl -sL "https://${DOCKER_REGISTRY}/v2/${DOCKER_ORG}/${QUIBBLE_DOCKER_IMAGE}/tags/list" |
             python3 -c 'import json;print("\n".join(json.loads(input())["tags"]))' |
-            grep -v latest | sort -Vr | head -1)"
+            grep -v latest |
+            while read -r tag; do
+              if [ -z "$max_tag" ] || [ "$(printf '%s\n' "$tag" "$max_tag" | sort -V | tail -1)" == "$max_tag" ]; then
+                echo "$tag"
+              fi
+            done | sort -Vr | head -1)"
         fi
         echo "quibble=${QUIBBLE_DOCKER_LATEST_TAG}" >> "$GITHUB_OUTPUT"
         if [ "${STAGE}" == 'phan' ]; then
