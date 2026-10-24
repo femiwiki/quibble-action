@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.3](https://github.com/femiwiki/quibble-action/compare/v3.0.2...v3.0.3) (2026-10-24)
+
+
+### Bug Fixes
+
+* Keep WebdriverIO stages off the Node 26 Quibble images ([#140](https://github.com/femiwiki/quibble-action/issues/140)) ([6ac2249](https://github.com/femiwiki/quibble-action/commit/6ac22491d2188b0a7b1691e3537a78aeece4e7e7))
+
 ## [3.0.2](https://github.com/femiwiki/quibble-action/compare/v3.0.1...v3.0.2) (2026-10-20)
 
 
