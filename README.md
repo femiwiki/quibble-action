@@ -350,12 +350,16 @@ those two knobs. Any image can also be pinned explicitly with its
 | `coverage` | `quibble-coverage` | `coverage-docker-image` |
 | `phan` | `mediawiki-phan-testrun` | `phan-docker-image` |
 
-The `<tag>` is the newest one in the registry. `quibble-docker-tag` pins the
-Quibble image to an older tag, for when a new image breaks a stage that the
-project cannot fix itself. For example, Quibble images from `1.21.0-s3` ship
-Node 26, on which the browser download in WebdriverIO stops midway without an
-error ([puppeteer/puppeteer#14957](https://github.com/puppeteer/puppeteer/issues/14957)),
-so `selenium` needs `1.21.0-s2` there until that is fixed.
+The `<tag>` is the newest one in the registry, except for the stages that run
+WebdriverIO (`selenium` and `all`). Quibble images from `1.22.0-s4` ship Node
+26, on which WebdriverIO cannot drive a browser: the browser download stops
+midway without an error
+([puppeteer/puppeteer#14957](https://github.com/puppeteer/puppeteer/issues/14957)),
+and the image's own Chromium fails the session request with
+`UND_ERR_INVALID_ARG`. Those stages therefore take the newest tag up to
+`1.22.0-s3`, the last one with Node 24, until that is fixed.
+`quibble-docker-tag` pins the Quibble image to any tag, for when a new image
+breaks a stage that the project cannot fix itself.
 
 `coverage` is not derived from `debian`/`php-version`: it uses the single
 `quibble-coverage` image (pcov-based, the one Wikimedia CI uses), which replaced
