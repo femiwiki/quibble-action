@@ -56,7 +56,7 @@ jobs:
           persist-credentials: false
       - uses: rvben/rumdl@dac508e6b2f52c1d869811d138ffc1ff2b9f6e71 # v0.3.3
         with:
-          version: 0.3.4
+          version: 0.3.5
 
   taplo:
     runs-on: ubuntu-latest
